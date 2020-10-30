@@ -117,7 +117,7 @@ class ReflectionClass extends \ReflectionClass
 
 		$source = file_get_contents($this->getFileName());
 
-		$this->useStatements = $this->tokenizeSource($source);
+		[ $this->useStatements, $this->useStatementsIndex ] = $this->tokenizeSource($source);
 
 		$this->isUseStatementsParsed = true;
 
@@ -133,7 +133,9 @@ class ReflectionClass extends \ReflectionClass
 	protected function tokenizeSource($source) : array
 	{
 		$useStatements = [];
-		$useStatementsIndex = [];
+		$useStatementsIndex = [
+			'alias' => [],
+		];
 
 		$tokens = token_get_all($source);
 
