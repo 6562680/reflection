@@ -110,9 +110,44 @@ class CachedReflection
 	 * @param mixed        $item
 	 * @param string|null &$class
 	 *
+	 * @return ReflectionClass
+	 */
+	public function reflectClass($item, string &$class = null) : ReflectionClass
+	{
+		switch ( true ):
+			case $this->type->isReflectableClass($item, $class):
+			case $this->type->isReflectionClass($item, $class):
+				break;
+
+			default:
+				throw new InvalidArgumentException('Argument 1 should be object or class', func_get_args());
+
+		endswitch;
+
+		if ($this->cacheHas($key = $class)) {
+			$result = $this->cacheGet($key);
+
+		} else {
+			try {
+				$result = new ReflectionClass($item);
+			}
+			catch ( \ReflectionException $e ) {
+				throw new RuntimeException('Unable to reflect', func_get_args(), $e);
+			}
+
+			$this->cacheSet($key, $result, 7 * 86400);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @param mixed        $item
+	 * @param string|null &$class
+	 *
 	 * @return \ReflectionClass
 	 */
-	public function reflectClass($item, string &$class = null) : \ReflectionClass
+	public function reflectClassNormal($item, string &$class = null) : \ReflectionClass
 	{
 		switch ( true ):
 			case $this->type->isReflectableClass($item, $class):
