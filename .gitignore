@@ -1,4 +1,6 @@
-!.gitkeep
 /.data
 /.idea
 /vendor
+composer.lock
+
+!.gitkeep
