@@ -10,7 +10,7 @@ use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 /**
  * Class Reflection
  */
-class Reflection
+class Reflection implements ReflectionInterface
 {
 	/**
 	 * @var Php

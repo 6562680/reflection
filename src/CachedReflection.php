@@ -11,7 +11,7 @@ use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 /**
  * Class CachedReflection
  */
-class CachedReflection
+class CachedReflection extends Reflection implements ReflectionInterface
 {
 	/**
 	 * @var Php
@@ -42,67 +42,9 @@ class CachedReflection
 		CacheInterface $cache
 	)
 	{
-		$this->php = $php;
-		$this->type = $type;
-
 		$this->cache = $cache;
-	}
 
-
-	/**
-	 * @param string $key
-	 * @param mixed  $default
-	 *
-	 * @return mixed
-	 */
-	public function cacheGet(string $key, $default = null)
-	{
-		try {
-			$result = $this->cache->get($key, $default);
-		}
-		catch ( \Psr\SimpleCache\InvalidArgumentException $e ) {
-			throw new RuntimeException('Unable to ' . __METHOD__, func_get_args(), $e);
-		}
-
-		return $result;
-	}
-
-
-	/**
-	 * @param string $key
-	 *
-	 * @return bool
-	 */
-	public function cacheHas(string $key) : bool
-	{
-		try {
-			$result = $this->cache->has($key);
-		}
-		catch ( \Psr\SimpleCache\InvalidArgumentException $e ) {
-			throw new RuntimeException('Unable to ' . __METHOD__, func_get_args(), $e);
-		}
-
-		return $result;
-	}
-
-
-	/**
-	 * @param string                 $key
-	 * @param mixed                  $value
-	 * @param null|int|\DateInterval $ttl
-	 *
-	 * @return CachedReflection
-	 */
-	public function cacheSet(string $key, $value, $ttl = null)
-	{
-		try {
-			$this->cache->set($key, $value, $ttl);
-		}
-		catch ( \Psr\SimpleCache\InvalidArgumentException $e ) {
-			throw new RuntimeException('Unable to ' . __METHOD__, func_get_args(), $e);
-		}
-
-		return $this;
+		parent::__construct($php, $type);
 	}
 
 
@@ -280,5 +222,62 @@ class CachedReflection
 		}
 
 		return $result;
+	}
+
+
+	/**
+	 * @param string $key
+	 * @param mixed  $default
+	 *
+	 * @return mixed
+	 */
+	protected function cacheGet(string $key, $default = null)
+	{
+		try {
+			$result = $this->cache->get($key, $default);
+		}
+		catch ( \Psr\SimpleCache\InvalidArgumentException $e ) {
+			throw new RuntimeException('Unable to ' . __METHOD__, func_get_args(), $e);
+		}
+
+		return $result;
+	}
+
+
+	/**
+	 * @param string $key
+	 *
+	 * @return bool
+	 */
+	protected function cacheHas(string $key) : bool
+	{
+		try {
+			$result = $this->cache->has($key);
+		}
+		catch ( \Psr\SimpleCache\InvalidArgumentException $e ) {
+			throw new RuntimeException('Unable to ' . __METHOD__, func_get_args(), $e);
+		}
+
+		return $result;
+	}
+
+
+	/**
+	 * @param string                 $key
+	 * @param mixed                  $value
+	 * @param null|int|\DateInterval $ttl
+	 *
+	 * @return CachedReflection
+	 */
+	protected function cacheSet(string $key, $value, $ttl = null)
+	{
+		try {
+			$this->cache->set($key, $value, $ttl);
+		}
+		catch ( \Psr\SimpleCache\InvalidArgumentException $e ) {
+			throw new RuntimeException('Unable to ' . __METHOD__, func_get_args(), $e);
+		}
+
+		return $this;
 	}
 }
