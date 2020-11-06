@@ -2,9 +2,8 @@
 
 namespace Gzhegow\Reflection\Exceptions\Logic;
 
-use Gzhegow\Support\Exceptions\Logic\InvalidArgumentException as SupportInvalidArgumentException;
+use Gzhegow\Reflection\Exceptions\LogicException;
 
-class InvalidArgumentException extends SupportInvalidArgumentException
+class InvalidArgumentException extends LogicException
 {
-
 }
