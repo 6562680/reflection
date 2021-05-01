@@ -11,7 +11,7 @@ use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 /**
  * Reflection
  */
-class Reflection
+class Reflection implements ReflectionInterface
 {
     /**
      * @var Php
