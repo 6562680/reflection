@@ -4,22 +4,43 @@ namespace Gzhegow\Reflection\Tests;
 
 use Gzhegow\Support\Php;
 use Gzhegow\Support\Type;
+use Gzhegow\Support\Filter;
 use PHPUnit\Framework\TestCase;
 use Gzhegow\Reflection\Reflection;
+use Gzhegow\Support\Domain\Type\Assert;
 use Gzhegow\Reflection\ReflectionInterface;
 
 
 class ReflectionTest extends TestCase
 {
-    protected function getPhp() : Php
+    protected function getAssert() : Assert
     {
-        return new Php();
+        return new Assert();
+    }
+
+    protected function getFilter() : Filter
+    {
+        return new Filter(
+            $this->getAssert()
+        );
     }
 
     protected function getType() : Type
     {
-        return new Type();
+        return new Type(
+            $this->getAssert()
+        );
     }
+
+    protected function getPhp() : Php
+    {
+        return new Php(
+            $this->getFilter(),
+            $this->getType(),
+        );
+    }
+
+
 
     protected function getReflection() : ReflectionInterface
     {

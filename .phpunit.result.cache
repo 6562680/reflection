@@ -1,1 +1,0 @@
-C:37:"PHPUnit\Runner\DefaultTestResultCache":162:{a:2:{s:7:"defects";a:1:{s:45:"Gzhegow\Reflection\Tests\ReflectionTest::test";i:3;}s:5:"times";a:1:{s:45:"Gzhegow\Reflection\Tests\ReflectionTest::test";d:0.005;}}}
