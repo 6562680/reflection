@@ -4,8 +4,9 @@ namespace Gzhegow\Reflection\Tests;
 
 use PHPUnit\Framework\TestCase;
 
+
 /**
- * Class AbstractTestCase
+ * AbstractTestCase
  */
 abstract class AbstractTestCase extends TestCase
 {

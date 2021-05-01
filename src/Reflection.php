@@ -63,7 +63,7 @@ class Reflection implements ReflectionInterface
      *
      * @return bool
      */
-    public function isReflection($reflection, ReflectionInfo $reflectionInfo = null) : bool
+    public function isReflection($reflection, ReflectionInfo &$reflectionInfo = null) : bool
     {
         return null !== $this->filterReflection($reflection, $reflectionInfo);
     }
@@ -256,7 +256,7 @@ class Reflection implements ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflection($reflection, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass
+    public function filterReflection($reflection, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass
     {
         $reflectionInfo = $reflectionInfo ?? new ReflectionInfo();
 
@@ -279,12 +279,13 @@ class Reflection implements ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectable($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass
+    public function filterReflectable($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass
     {
-        if (0
-            || $this->filterReflectableObject($reflectable, $reflectionInfo)
-            || $this->filterReflectableClass($reflectable, $reflectionInfo)
-        ) {
+        $reflection = null
+            ?? $this->filterReflectableObject($reflectable, $reflectionInfo)
+            ?? $this->filterReflectableClass($reflectable, $reflectionInfo);
+
+        if (null !== $reflection) {
             return $reflectionInfo->reflection;
         }
 
@@ -298,12 +299,13 @@ class Reflection implements ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectableObject($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass
+    public function filterReflectableObject($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass
     {
-        if (0
-            || $this->isReflection($reflectable, $reflectionInfo)
-            || $this->filterReflectableInstance($reflectable, $reflectionInfo)
-        ) {
+        $reflection = null
+            ?? $this->filterReflection($reflectable, $reflectionInfo)
+            ?? $this->filterReflectableInstance($reflectable, $reflectionInfo);
+
+        if (null !== $reflection) {
             return $reflectionInfo->reflection;
         }
 
@@ -317,7 +319,7 @@ class Reflection implements ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectableClass($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass
+    public function filterReflectableClass($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass
     {
         $reflectionInfo = $reflectionInfo ?? new ReflectionInfo();
 
@@ -325,7 +327,7 @@ class Reflection implements ReflectionInterface
             return null;
         }
 
-        if ($reflectable !== \ReflectionClass::class) {
+        if ($reflectable === \ReflectionClass::class) {
             return null;
         }
 
@@ -342,7 +344,7 @@ class Reflection implements ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectableInstance($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass
+    public function filterReflectableInstance($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass
     {
         $reflectionInfo = $reflectionInfo ?? new ReflectionInfo();
 
@@ -365,7 +367,7 @@ class Reflection implements ReflectionInterface
      *
      * @return ReflectionClass
      */
-    public function reflectClass($reflectable, ReflectionInfo $reflectionInfo = null) : ReflectionClass
+    public function reflectClass($reflectable, ReflectionInfo &$reflectionInfo = null) : ReflectionClass
     {
         if (null === ( $reflection = $this->filterReflectable($reflectable, $reflectionInfo) )) {
             throw new InvalidArgumentException('Item should be reflectable', func_get_args());
@@ -382,7 +384,7 @@ class Reflection implements ReflectionInterface
      *
      * @return ReflectionClass
      */
-    public function reflectClassNative($reflectable, ReflectionInfo $reflectionInfo = null) : \ReflectionClass
+    public function reflectClassNative($reflectable, ReflectionInfo &$reflectionInfo = null) : \ReflectionClass
     {
         if (null === ( $reflection = $this->filterReflectable($reflectable, $reflectionInfo) )) {
             throw new InvalidArgumentException('Item should be reflectable', func_get_args());
@@ -400,7 +402,7 @@ class Reflection implements ReflectionInterface
      * @return \ReflectionMethod
      */
     public function reflectMethod($reflectable, string $method,
-        ReflectionInfo $reflectionInfo = null
+        ReflectionInfo &$reflectionInfo = null
     ) : \ReflectionMethod
     {
         if ('' === $method) {
@@ -427,7 +429,7 @@ class Reflection implements ReflectionInterface
      * @return \ReflectionProperty
      */
     public function reflectProperty($reflectable, string $property,
-        ReflectionInfo $reflectionInfo = null
+        ReflectionInfo &$reflectionInfo = null
     ) : \ReflectionProperty
     {
         if ('' === $property) {
@@ -454,11 +456,11 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallable($callable) // : ?\ReflectionFunction|\ReflectionMethod
     {
-        $rf = null
+        $reflection = null
             ?? $this->reflectFunction($callable)
             ?? $this->reflectCallableArray($callable);
 
-        return $rf;
+        return $reflection;
     }
 
 
@@ -469,11 +471,11 @@ class Reflection implements ReflectionInterface
      */
     public function reflectFunction($callable) // : ?\ReflectionFunction|\ReflectionMethod
     {
-        $rf = null
+        $reflection = null
             ?? $this->reflectClosure($callable)
             ?? $this->reflectCallableString($callable);
 
-        return $rf;
+        return $reflection;
     }
 
 
@@ -528,11 +530,11 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallableArray($callable) : ?\ReflectionMethod
     {
-        $rf = $this->type->isCallableArray($callable)
+        $reflection = $this->type->isCallableArray($callable)
             ? $this->reflectMethod($callable[ 0 ], $callable[ 1 ])
             : null;
 
-        return $rf;
+        return $reflection;
     }
 
     /**
@@ -542,11 +544,11 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallableArrayStatic($callable) : ?\ReflectionMethod
     {
-        $rf = $this->type->isCallableArrayStatic($callable)
+        $reflection = $this->type->isCallableArrayStatic($callable)
             ? $this->reflectMethod($callable[ 0 ], $callable[ 1 ])
             : null;
 
-        return $rf;
+        return $reflection;
     }
 
     /**
@@ -556,11 +558,11 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallableArrayPublic($callable) : ?\ReflectionMethod
     {
-        $rf = $this->type->isCallableArrayPublic($callable)
+        $reflection = $this->type->isCallableArrayPublic($callable)
             ? $this->reflectMethod($callable[ 0 ], $callable[ 1 ])
             : null;
 
-        return $rf;
+        return $reflection;
     }
 
 
@@ -571,7 +573,7 @@ class Reflection implements ReflectionInterface
      *
      * @return array
      */
-    public function propertyInfo($item, string $property, ReflectionInfo $reflectionInfo = null) : array
+    public function propertyInfo($item, string $property, ReflectionInfo &$reflectionInfo = null) : array
     {
         $result = [];
 
@@ -594,7 +596,7 @@ class Reflection implements ReflectionInterface
      *
      * @return array
      */
-    public function methodInfo($item, string $method, ReflectionInfo $reflectionInfo = null) : array
+    public function methodInfo($item, string $method, ReflectionInfo &$reflectionInfo = null) : array
     {
         $result = [];
 

@@ -34,7 +34,7 @@ class ReflectionClass extends \ReflectionClass
     public static function fromNative(\ReflectionClass $reflection) : self
     {
         try {
-            $result = new static($reflection);
+            $result = new static($reflection->getName());
         }
         catch ( \ReflectionException $e ) {
             throw new RuntimeException('Unable to reflect', func_get_args(), $e);

@@ -14,7 +14,7 @@ interface ReflectionInterface
      *
      * @return bool
      */
-    public function isReflection($reflection, ReflectionInfo $reflectionInfo = null) : bool;
+    public function isReflection($reflection, ReflectionInfo &$reflectionInfo = null) : bool;
 
     /**
      * @param mixed $reflectable
@@ -95,7 +95,7 @@ interface ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflection($reflection, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass;
+    public function filterReflection($reflection, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass;
 
 
     /**
@@ -104,7 +104,7 @@ interface ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectable($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass;
+    public function filterReflectable($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass;
 
     /**
      * @param mixed               $reflectable
@@ -112,7 +112,7 @@ interface ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectableObject($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass;
+    public function filterReflectableObject($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass;
 
 
     /**
@@ -121,7 +121,7 @@ interface ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectableClass($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass;
+    public function filterReflectableClass($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass;
 
     /**
      * @param mixed               $reflectable
@@ -129,7 +129,7 @@ interface ReflectionInterface
      *
      * @return null|\ReflectionClass
      */
-    public function filterReflectableInstance($reflectable, ReflectionInfo $reflectionInfo = null) : ?\ReflectionClass;
+    public function filterReflectableInstance($reflectable, ReflectionInfo &$reflectionInfo = null) : ?\ReflectionClass;
 
 
     /**
@@ -138,7 +138,7 @@ interface ReflectionInterface
      *
      * @return ReflectionClass
      */
-    public function reflectClass($reflectable, ReflectionInfo $reflectionInfo = null) : ReflectionClass;
+    public function reflectClass($reflectable, ReflectionInfo &$reflectionInfo = null) : ReflectionClass;
 
     /**
      * @param mixed               $reflectable
@@ -146,7 +146,7 @@ interface ReflectionInterface
      *
      * @return ReflectionClass
      */
-    public function reflectClassNative($reflectable, ReflectionInfo $reflectionInfo = null) : \ReflectionClass;
+    public function reflectClassNative($reflectable, ReflectionInfo &$reflectionInfo = null) : \ReflectionClass;
 
 
     /**
@@ -157,7 +157,7 @@ interface ReflectionInterface
      * @return \ReflectionMethod
      */
     public function reflectMethod($reflectable, string $method,
-        ReflectionInfo $reflectionInfo = null
+        ReflectionInfo &$reflectionInfo = null
     ) : \ReflectionMethod;
 
     /**
@@ -168,7 +168,7 @@ interface ReflectionInterface
      * @return \ReflectionProperty
      */
     public function reflectProperty($reflectable, string $property,
-        ReflectionInfo $reflectionInfo = null
+        ReflectionInfo &$reflectionInfo = null
     ) : \ReflectionProperty;
 
 
@@ -231,7 +231,7 @@ interface ReflectionInterface
      *
      * @return array
      */
-    public function propertyInfo($item, string $property, ReflectionInfo $reflectionInfo = null) : array;
+    public function propertyInfo($item, string $property, ReflectionInfo &$reflectionInfo = null) : array;
 
     /**
      * @param mixed               $item
@@ -240,5 +240,5 @@ interface ReflectionInterface
      *
      * @return array
      */
-    public function methodInfo($item, string $method, ReflectionInfo $reflectionInfo = null) : array;
+    public function methodInfo($item, string $method, ReflectionInfo &$reflectionInfo = null) : array;
 }
