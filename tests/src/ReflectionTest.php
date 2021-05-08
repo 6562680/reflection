@@ -7,28 +7,20 @@ use Gzhegow\Support\Type;
 use Gzhegow\Support\Filter;
 use PHPUnit\Framework\TestCase;
 use Gzhegow\Reflection\Reflection;
-use Gzhegow\Support\Domain\Type\Assert;
 use Gzhegow\Reflection\ReflectionInterface;
 
 
 class ReflectionTest extends TestCase
 {
-    protected function getAssert() : Assert
-    {
-        return new Assert();
-    }
-
     protected function getFilter() : Filter
     {
-        return new Filter(
-            $this->getAssert()
-        );
+        return new Filter();
     }
 
     protected function getType() : Type
     {
         return new Type(
-            $this->getAssert()
+            $this->getFilter()
         );
     }
 
