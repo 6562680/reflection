@@ -3,7 +3,7 @@
 namespace Gzhegow\Reflection;
 
 use Gzhegow\Support\Php;
-use Gzhegow\Support\Type;
+use Gzhegow\Support\Filter;
 use Gzhegow\Reflection\Exceptions\RuntimeException;
 use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 
@@ -14,28 +14,28 @@ use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 class Reflection implements ReflectionInterface
 {
     /**
+     * @var Filter
+     */
+    protected $filter;
+    /**
      * @var Php
      */
     protected $php;
-    /**
-     * @var Type
-     */
-    protected $type;
 
 
     /**
      * Constructor
      *
-     * @param Php  $php
-     * @param Type $type
+     * @param Filter $filter
+     * @param Php    $php
      */
     public function __construct(
-        Php $php,
-        Type $type
+        Filter $filter,
+        Php $php
     )
     {
+        $this->filter = $filter;
         $this->php = $php;
-        $this->type = $type;
     }
 
 
@@ -486,7 +486,7 @@ class Reflection implements ReflectionInterface
      */
     public function reflectClosure($func) : ?\ReflectionFunction
     {
-        if (! $this->type->isClosure($func)) {
+        if (null === $this->filter->filterClosure($func)) {
             return null;
         }
 
@@ -530,7 +530,7 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallableArray($callable) : ?\ReflectionMethod
     {
-        $reflection = $this->type->isCallableArray($callable)
+        $reflection = ( null !== $this->filter->filterCallableArray($callable) )
             ? $this->reflectMethod($callable[ 0 ], $callable[ 1 ])
             : null;
 
@@ -544,7 +544,7 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallableArrayStatic($callable) : ?\ReflectionMethod
     {
-        $reflection = $this->type->isCallableArrayStatic($callable)
+        $reflection = ( null !== $this->filter->filterCallableArrayStatic($callable) )
             ? $this->reflectMethod($callable[ 0 ], $callable[ 1 ])
             : null;
 
@@ -558,7 +558,7 @@ class Reflection implements ReflectionInterface
      */
     public function reflectCallableArrayPublic($callable) : ?\ReflectionMethod
     {
-        $reflection = $this->type->isCallableArrayPublic($callable)
+        $reflection = ( null !== $this->filter->filterCallableArrayPublic($callable) )
             ? $this->reflectMethod($callable[ 0 ], $callable[ 1 ])
             : null;
 

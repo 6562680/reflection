@@ -3,7 +3,6 @@
 namespace Gzhegow\Reflection\Tests;
 
 use Gzhegow\Support\Php;
-use Gzhegow\Support\Type;
 use Gzhegow\Support\Filter;
 use PHPUnit\Framework\TestCase;
 use Gzhegow\Reflection\Reflection;
@@ -17,18 +16,10 @@ class ReflectionTest extends TestCase
         return new Filter();
     }
 
-    protected function getType() : Type
-    {
-        return new Type(
-            $this->getFilter()
-        );
-    }
-
     protected function getPhp() : Php
     {
         return new Php(
-            $this->getFilter(),
-            $this->getType(),
+            $this->getFilter()
         );
     }
 
@@ -37,8 +28,8 @@ class ReflectionTest extends TestCase
     protected function getReflection() : ReflectionInterface
     {
         return new Reflection(
-            $this->getPhp(),
-            $this->getType(),
+            $this->getFilter(),
+            $this->getPhp()
         );
     }
 
