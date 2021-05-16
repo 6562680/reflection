@@ -20,7 +20,7 @@ class ReflectionInfo
     /**
      * @var ReflectionClass
      */
-    public $reflection;
+    public $reflectionClass;
 
 
     /**
@@ -29,9 +29,10 @@ class ReflectionInfo
     public function toArray() : array
     {
         return [
-            'object'     => $this->object,
-            'class'      => $this->class,
-            'reflection' => $this->reflection,
+            'object' => $this->object,
+            'class'  => $this->class,
+
+            'reflectionClass' => $this->reflectionClass,
         ];
     }
 }
