@@ -2,8 +2,8 @@
 
 namespace Gzhegow\Reflection\Exceptions;
 
-// use Gzhegow\Support\Exceptions\LogicException as SupportLogicException;
-use Gzhegow\Support\Exceptions\Exception as SupportLogicException;
+use Gzhegow\Support\Exceptions\LogicException as SupportLogicException;
+
 
 /**
  * Class LogicException

@@ -32,190 +32,13 @@ class Assert
     /**
      * @param mixed $reflectionClass
      *
-     * @return bool
-     */
-    public function isReflectionClass($reflectionClass) : bool
-    {
-        return null !== $this->filterReflectionClass($reflectionClass);
-    }
-
-
-    /**
-     * @param mixed $reflectionFunction
-     *
-     * @return bool
-     */
-    public function isReflectionFunction($reflectionFunction) : bool
-    {
-        return null !== $this->filterReflectionFunction($reflectionFunction);
-    }
-
-    /**
-     * @param mixed $reflectionMethod
-     *
-     * @return bool
-     */
-    public function isReflectionMethod($reflectionMethod) : bool
-    {
-        return null !== $this->filterReflectionMethod($reflectionMethod);
-    }
-
-
-    /**
-     * @param mixed $reflectionProperty
-     *
-     * @return bool
-     */
-    public function isReflectionProperty($reflectionProperty) : bool
-    {
-        return null !== $this->filterReflectionProperty($reflectionProperty);
-    }
-
-    /**
-     * @param mixed $reflectionParameter
-     *
-     * @return bool
-     */
-    public function isReflectionParameter($reflectionParameter) : bool
-    {
-        return null !== $this->filterReflectionParameter($reflectionParameter);
-    }
-
-
-    /**
-     * @param mixed $reflectionType
-     *
-     * @return bool
-     */
-    public function isReflectionType($reflectionType) : bool
-    {
-        return null !== $this->filterReflectionType($reflectionType);
-    }
-
-    /**
-     * @param mixed $reflectionType
-     *
-     * @return bool
-     */
-    public function isReflectionUnionType($reflectionType) : bool
-    {
-        return null !== $this->filterReflectionUnionType($reflectionType);
-    }
-
-    /**
-     * @param mixed $reflectionType
-     *
-     * @return bool
-     */
-    public function isReflectionNamedType($reflectionType) : bool
-    {
-        return null !== $this->filterReflectionNamedType($reflectionType);
-    }
-
-
-    /**
-     * @param mixed $reflectable
-     *
-     * @return bool
-     */
-    public function isReflectable($reflectable) : bool
-    {
-        return null !== $this->filterReflectableObject($reflectable);
-    }
-
-    /**
-     * @param mixed $reflectable
-     *
-     * @return bool
-     */
-    public function isReflectableObject($reflectable) : bool
-    {
-        return null !== $this->filterReflectableObject($reflectable);
-    }
-
-
-    /**
-     * @param mixed $reflectable
-     *
-     * @return bool
-     */
-    public function isReflectableClass($reflectable) : bool
-    {
-        return null !== $this->filterReflectableClass($reflectable);
-    }
-
-    /**
-     * @param mixed $reflectable
-     *
-     * @return bool
-     */
-    public function isReflectableInstance($reflectable) : bool
-    {
-        return null !== $this->filterReflectableInstance($reflectable);
-    }
-
-
-    /**
-     * @param mixed $reflectableCallable
-     *
-     * @return bool
-     */
-    public function isReflectableCallable($reflectableCallable) : bool
-    {
-        return null !== $this->filterReflectableCallable($reflectableCallable);
-    }
-
-
-    /**
-     * @param mixed $reflectableCallable
-     *
-     * @return bool
-     */
-    public function isReflectableFunction($reflectableCallable) : bool
-    {
-        return null !== $this->filterReflectableFunction($reflectableCallable);
-    }
-
-    /**
-     * @param mixed $reflectableCallable
-     *
-     * @return bool
-     */
-    public function isReflectableMethod($reflectableCallable) : bool
-    {
-        return null !== $this->filterReflectableMethod($reflectableCallable);
-    }
-
-
-    /**
-     * @param mixed $reflectableCallable
-     *
-     * @return bool
-     */
-    public function isReflectableMethodStatic($reflectableCallable) : bool
-    {
-        return null !== $this->filterReflectableMethodStatic($reflectableCallable);
-    }
-
-    /**
-     * @param mixed $reflectableCallable
-     *
-     * @return bool
-     */
-    public function isReflectableMethodPublic($reflectableCallable) : bool
-    {
-        return null !== $this->filterReflectableMethodPublic($reflectableCallable);
-    }
-
-
-    /**
-     * @param mixed $reflectionClass
-     *
      * @return null|\ReflectionClass
      */
     public function filterReflectionClass($reflectionClass) : ?\ReflectionClass
     {
-        if (is_object($reflectionClass) && is_a($reflectionClass, \ReflectionClass::class)) {
+        if (is_object($reflectionClass)
+            && is_a($reflectionClass, \ReflectionClass::class)
+        ) {
             return $reflectionClass;
         }
 
@@ -230,7 +53,9 @@ class Assert
      */
     public function filterReflectionFunction($reflectionFunction) : ?\ReflectionFunction
     {
-        if (is_object($reflectionFunction) && is_a($reflectionFunction, \ReflectionFunction::class)) {
+        if (is_object($reflectionFunction)
+            && is_a($reflectionFunction, \ReflectionFunction::class)
+        ) {
             return $reflectionFunction;
         }
 
@@ -244,7 +69,9 @@ class Assert
      */
     public function filterReflectionMethod($reflectionMethod) : ?\ReflectionMethod
     {
-        if (is_object($reflectionMethod) && is_a($reflectionMethod, \ReflectionMethod::class)) {
+        if (is_object($reflectionMethod)
+            && is_a($reflectionMethod, \ReflectionMethod::class)
+        ) {
             return $reflectionMethod;
         }
 
@@ -259,7 +86,9 @@ class Assert
      */
     public function filterReflectionProperty($reflectionProperty) : ?\ReflectionProperty
     {
-        if (is_object($reflectionProperty) && is_a($reflectionProperty, \ReflectionProperty::class)) {
+        if (is_object($reflectionProperty)
+            && is_a($reflectionProperty, \ReflectionProperty::class)
+        ) {
             return $reflectionProperty;
         }
 
@@ -273,7 +102,9 @@ class Assert
      */
     public function filterReflectionParameter($reflectionParameter) : ?\ReflectionParameter
     {
-        if (is_object($reflectionParameter) && is_a($reflectionParameter, \ReflectionParameter::class)) {
+        if (is_object($reflectionParameter)
+            && is_a($reflectionParameter, \ReflectionParameter::class)
+        ) {
             return $reflectionParameter;
         }
 
@@ -288,7 +119,9 @@ class Assert
      */
     public function filterReflectionType($reflectionType) : ?\ReflectionType
     {
-        if (is_object($reflectionType) && is_a($reflectionType, \ReflectionType::class)) {
+        if (is_object($reflectionType)
+            && is_a($reflectionType, \ReflectionType::class)
+        ) {
             return $reflectionType;
         }
 
@@ -319,7 +152,9 @@ class Assert
      */
     public function filterReflectionNamedType($reflectionType) : ?\ReflectionNamedType
     {
-        if (is_object($reflectionType) && is_a($reflectionType, \ReflectionNamedType::class)) {
+        if (is_object($reflectionType)
+            && is_a($reflectionType, \ReflectionNamedType::class)
+        ) {
             return $reflectionType;
         }
 
@@ -336,7 +171,7 @@ class Assert
     {
         $reflectable = null
             ?? $this->filterReflectableObject($reflectable)
-            ?? $this->filterReflectableClass($reflectable);
+            ?? $this->filterReflectableString($reflectable);
 
         return $reflectable;
     }
@@ -352,6 +187,40 @@ class Assert
         $reflectable = null
             ?? $this->filterReflectionClass($reflectable)
             ?? $this->filterReflectableInstance($reflectable);
+
+        return $reflectable;
+    }
+
+    /**
+     * @param mixed $reflectable
+     *
+     * @return null|object
+     */
+    public function filterReflectableInstance($reflectable) //: ?object
+    {
+        if (! is_object($reflectable)) {
+            return null;
+        }
+
+        if ($isReflector = is_a($reflectable, \Reflector::class)) {
+            return null;
+        }
+
+        return $reflectable;
+    }
+
+
+    /**
+     * @param mixed $reflectable
+     *
+     * @return null|string|object|\ReflectionClass
+     */
+    public function filterReflectableString($reflectable) //: ?string|object|\ReflectionClass
+    {
+        $reflectable = null
+            ?? $this->filterReflectableClass($reflectable)
+            ?? $this->filterReflectableInterface($reflectable)
+            ?? $this->filterReflectableTrait($reflectable);
 
         return $reflectable;
     }
@@ -382,21 +251,57 @@ class Assert
     /**
      * @param mixed $reflectable
      *
-     * @return null|object
+     * @return null|string
      */
-    public function filterReflectableInstance($reflectable) //: ?object
+    public function filterReflectableInterface($reflectable) : ?string
     {
-        if (! is_object($reflectable)) {
+        if (! is_string($reflectable)) {
             return null;
         }
 
-        if ($isReflector = is_a($reflectable, \Reflector::class)) {
+        if (! interface_exists($reflectable)) {
             return null;
         }
 
         return $reflectable;
     }
 
+    /**
+     * @param mixed $reflectable
+     *
+     * @return null|string
+     */
+    public function filterReflectableTrait($reflectable) : ?string
+    {
+        if (! is_string($reflectable)) {
+            return null;
+        }
+
+        if (! trait_exists($reflectable)) {
+            return null;
+        }
+
+        return $reflectable;
+    }
+
+
+    /**
+     * @param mixed $reflectableInvokable
+     *
+     * @return null|string|array|\Closure|\ReflectionFunction|\ReflectionMethod
+     */
+    public function filterReflectableInvokable($reflectableInvokable) //: ?string|array|\Closure|\ReflectionFunction|\ReflectionMethod
+    {
+        $reflectableInvokable = null
+            ?? $this->filterReflectionFunction($reflectableInvokable)
+            ?? $this->filterReflectionMethod($reflectableInvokable)
+            ?? $this->filter->filterClosure($reflectableInvokable)
+            ?? $this->filter->filterCallableArray($reflectableInvokable)
+            ?? $this->filter->filterCallableString($reflectableInvokable)
+            ?? $this->filter->filterHandler($reflectableInvokable);
+
+        return $reflectableInvokable;
+    }
 
     /**
      * @param mixed $reflectableCallable
@@ -407,70 +312,77 @@ class Assert
     {
         $reflectableCallable = null
             ?? $this->filterReflectionFunction($reflectableCallable)
+            ?? $this->filterReflectionMethod($reflectableCallable)
             ?? $this->filter->filterClosure($reflectableCallable)
-            ?? $this->filter->filterCallable($reflectableCallable);
+            ?? $this->filter->filterCallableArray($reflectableCallable)
+            ?? $this->filter->filterCallableStringFunction($reflectableCallable)
+            ?? $this->filter->filterCallableStringStatic($reflectableCallable)//
+            // ?? $this->filter->filterHandler($reflectableCallable)
+        ;
 
         return $reflectableCallable;
     }
 
 
     /**
-     * @param mixed $reflectableCallable
+     * @param mixed $reflectableFunction
      *
      * @return null|string|\Closure|\ReflectionFunction
      */
-    public function filterReflectableFunction($reflectableCallable) //: ?string|\Closure|\ReflectionFunction
+    public function filterReflectableFunction($reflectableFunction) //: ?string|\Closure|\ReflectionFunction
     {
-        $reflectableCallable = null
-            ?? $this->filterReflectionFunction($reflectableCallable)
-            ?? $this->filter->filterClosure($reflectableCallable)
-            ?? $this->filter->filterCallableStringFunction($reflectableCallable);
+        $reflectableFunction = null
+            ?? $this->filterReflectionFunction($reflectableFunction)
+            ?? $this->filter->filterClosure($reflectableFunction)
+            ?? $this->filter->filterCallableStringFunction($reflectableFunction);
 
-        return $reflectableCallable;
+        return $reflectableFunction;
     }
 
     /**
-     * @param mixed $reflectableCallable
+     * @param mixed $reflectableMethod
      *
      * @return null|string|array|\ReflectionMethod
      */
-    public function filterReflectableMethod($reflectableCallable) //: ?string|array|\ReflectionMethod
+    public function filterReflectableMethod($reflectableMethod) //: ?string|array|\ReflectionMethod
     {
-        $reflectableCallable = null
-            ?? $this->filterReflectionMethod($reflectableCallable)
-            ?? $this->filter->filterCallableArray($reflectableCallable)
-            ?? $this->filter->filterCallableStringStatic($reflectableCallable);
+        $reflectableMethod = null
+            ?? $this->filterReflectionMethod($reflectableMethod)
+            ?? $this->filter->filterMethodArray($reflectableMethod)
+            ?? $this->filter->filterCallableStringStatic($reflectableMethod)
+            ?? $this->filter->filterHandler($reflectableMethod);
 
-        return $reflectableCallable;
+        return $reflectableMethod;
     }
 
 
     /**
-     * @param mixed $reflectableCallable
+     * @param mixed $reflectableMethodStatic
      *
      * @return null|string|array|\ReflectionMethod
      */
-    public function filterReflectableMethodStatic($reflectableCallable) //: ?string|array|\ReflectionMethod
+    public function filterReflectableMethodStatic($reflectableMethodStatic) //: ?string|array|\ReflectionMethod
     {
-        $reflectableCallable = null
-            ?? $this->filterReflectionMethod($reflectableCallable)
-            ?? $this->filter->filterCallableArrayStatic($reflectableCallable)
-            ?? $this->filter->filterCallableStringStatic($reflectableCallable);
+        $reflectableMethodStatic = null
+            ?? $this->filterReflectionMethod($reflectableMethodStatic)
+            ?? $this->filter->filterCallableArrayStatic($reflectableMethodStatic)
+            ?? $this->filter->filterCallableStringStatic($reflectableMethodStatic);
 
-        return $reflectableCallable;
+        return $reflectableMethodStatic;
     }
 
     /**
-     * @param mixed $reflectableCallable
+     * @param mixed $reflectableMethodPublic
      *
      * @return null|string|array|\ReflectionMethod
      */
-    public function filterReflectableMethodPublic($reflectableCallable) //: ?string|array|\ReflectionMethod
+    public function filterReflectableMethodPublic($reflectableMethodPublic) //: ?string|array|\ReflectionMethod
     {
-        $reflectableCallable = null
-            ?? $this->filterReflectionMethod($reflectableCallable)
-            ?? $this->filter->filterCallableArrayPublic($reflectableCallable);
+        $reflectableMethodPublic = null
+            ?? $this->filterReflectionMethod($reflectableMethodPublic)
+            ?? $this->filter->filterCallableArrayPublic($reflectableMethodPublic)
+            ?? $this->filter->filterHandler($reflectableMethodPublic);
 
-        return $reflectableCallable;
+        return $reflectableMethodPublic;
     }
 }

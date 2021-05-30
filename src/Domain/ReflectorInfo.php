@@ -4,6 +4,7 @@ namespace Gzhegow\Reflection\Domain;
 
 use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 
+
 /**
  * ReflectorInfo
  */
@@ -97,7 +98,7 @@ class ReflectorInfo
      *
      * @return static
      */
-    public function copy(self $info)
+    public function sync(self $info)
     {
         $this->reflectionClass = $info->reflectionClass;
         $this->class = $info->class;

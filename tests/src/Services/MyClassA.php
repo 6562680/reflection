@@ -12,24 +12,25 @@ class MyClassA
     {
     }
 
-    public function methodProtected()
-    {
-    }
-
-    public function methodPrivate()
-    {
-    }
-
-
     final public function methodPublicFinal()
     {
     }
 
-    final public function methodProtectedFinal()
+
+    protected function methodProtected()
     {
     }
 
-    final public function methodPrivateFinal()
+    final protected function methodProtectedFinal()
+    {
+    }
+
+
+    private function methodPrivate()
+    {
+    }
+
+    final private function methodPrivateFinal()
     {
     }
 
@@ -38,24 +39,25 @@ class MyClassA
     {
     }
 
-    public static function methodProtectedStatic()
-    {
-    }
-
-    public static function methodPrivateStatic()
-    {
-    }
-
-
     final public static function methodPublicStaticFinal()
     {
     }
 
-    final public static function methodProtectedStaticFinal()
+
+    protected static function methodProtectedStatic()
     {
     }
 
-    final public static function methodPrivateStaticFinal()
+    final protected static function methodProtectedStaticFinal()
+    {
+    }
+
+
+    private static function methodPrivateStatic()
+    {
+    }
+
+    final private static function methodPrivateStaticFinal()
     {
     }
 }

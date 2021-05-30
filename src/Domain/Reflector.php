@@ -47,6 +47,7 @@ class Reflector
      * @var Php
      */
     protected $php;
+
     /**
      * @var Assert
      */
@@ -63,18 +64,20 @@ class Reflector
     public function __construct(
         Filter $filter,
         Php $php,
+
         Assert $assert
     )
     {
         $this->filter = $filter;
         $this->php = $php;
+
         $this->assert = $assert;
     }
 
 
     /**
-     * @param mixed              $reflectable
-     * @param null|ReflectorInfo $info
+     * @param string|object|\ReflectionClass $reflectable
+     * @param null|ReflectorInfo             $info
      *
      * @return \ReflectionClass
      * @throws InvalidArgumentException
@@ -82,7 +85,8 @@ class Reflector
      */
     protected function buildReflectionClass($reflectable, ReflectorInfo &$info = null) : \ReflectionClass
     {
-        $info = $info ?? $this->newReflectableInfo($reflectable);
+        $info = $info
+            ?? $this->newReflectorInfoFromReflectable($reflectable);
 
         $reflectionClass = $this->newReflectionClass($reflectable);
 
@@ -91,29 +95,34 @@ class Reflector
         return $reflectionClass;
     }
 
+
     /**
-     * @param mixed              $reflectableCallable
-     * @param null|ReflectorInfo $info
+     * @param string|array|\ReflectionMethod $reflectableMethod
+     * @param null|ReflectorInfo             $info
      *
      * @return \ReflectionMethod
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
-    protected function buildReflectionMethod($reflectableCallable, ReflectorInfo &$info = null) : \ReflectionMethod
+    protected function buildReflectionMethod($reflectableMethod, ReflectorInfo &$info = null) : \ReflectionMethod
     {
-        $info = $info ?? $this->newReflectableInfoCallableMethod($reflectableCallable);
+        $methodArray = $this->newMethodArrayFromReflectableInvokable($reflectableMethod);
 
-        $reflectionMethod = $this->newReflectionMethod($reflectableCallable);
+        $info = $info
+            ?? $this->newReflectorInfoFromReflectableMethod($methodArray);
+
+        $reflectionMethod = $this->newReflectionMethod($methodArray[ 0 ], $methodArray[ 1 ]);
 
         $info->setReflectionClass($reflectionMethod->getDeclaringClass());
 
         return $reflectionMethod;
     }
 
+
     /**
-     * @param mixed              $reflectable
-     * @param string             $propertyName
-     * @param null|ReflectorInfo $info
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $propertyName
+     * @param null|ReflectorInfo             $info
      *
      * @return \ReflectionProperty
      * @throws InvalidArgumentException
@@ -121,40 +130,66 @@ class Reflector
      */
     protected function buildReflectionProperty($reflectable, string $propertyName, ReflectorInfo &$info = null) : \ReflectionProperty
     {
-        if ('' === $propertyName) {
-            throw new InvalidArgumentException('Property should be not empty', func_get_args());
+        if (null === $this->filter->filterWord($propertyName)) {
+            throw new InvalidArgumentException(
+                [ 'PropertyName should be non-empty string: %s', $propertyName ]
+            );
         }
 
-        $info = $info ?? $this->newReflectableInfo($reflectable);
+        $info = $info
+            ?? $this->newReflectorInfoFromReflectable($reflectable);
 
-        $reflectionProperty = $this->newReflectionProperty($reflectable, $propertyName);
-
-        $info->setReflectionClass($reflectionProperty->getDeclaringClass());
+        if (null !== ( $reflectionClass = $this->assert->filterReflectionClass($reflectable) )) {
+            try {
+                $reflectionProperty = $reflectionClass->getProperty($propertyName);
+            }
+            catch ( \ReflectionException $e ) {
+                throw new ReflectionRuntimeException(
+                    [ 'Unable to get property: %s %s', $reflectionClass, $propertyName ], null, $e
+                );
+            }
+        } else {
+            $reflectionProperty = $this->newReflectionProperty($reflectable, $propertyName);
+        }
 
         return $reflectionProperty;
     }
 
     /**
-     * @param mixed              $reflectableCallable
-     * @param string             $parameterName
-     * @param null|ReflectorInfo $info
+     * @param string|array|\ReflectionFunction|\ReflectionMethod $reflectableInvokable
+     * @param int|string                                         $parameter
+     * @param null|ReflectorInfo                                 $info
      *
      * @return \ReflectionParameter
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
-    protected function buildReflectionParameter($reflectableCallable, string $parameterName, ReflectorInfo &$info = null) : \ReflectionParameter
+    protected function buildReflectionParameter($reflectableInvokable, $parameter, ReflectorInfo &$info = null) : \ReflectionParameter
     {
-        if ('' === $parameterName) {
-            throw new InvalidArgumentException('Parameter should be not empty', func_get_args());
+        if (null === $this->filter->filterWordOrInt($parameter)) {
+            throw new InvalidArgumentException(
+                [ 'Parameter should be int or non-empty string: %s', $parameter ]
+            );
         }
 
-        $info = $info ?? $this->newReflectableInfoCallableMethod($reflectableCallable);
+        $methodArray = $this->newMethodArrayFromReflectableInvokable($reflectableInvokable);
 
-        $reflectionParameter = $this->newReflectionParameter($reflectableCallable, $parameterName);
+        $hasInfo = ( null !== $info );
 
-        if ($reflectionClass = $reflectionParameter->getDeclaringClass()) {
-            $info->setReflectionClass($reflectionClass);
+        if (! $hasInfo
+            && ( null !== $this->assert->filterReflectableMethod($reflectableInvokable) )
+        ) {
+            $info = $this->newReflectorInfoFromReflectableMethod($reflectableInvokable);
+
+            $hasInfo = true;
+        }
+
+        $reflectionParameter = $this->newReflectionParameter($methodArray, $parameter);
+
+        if ($hasInfo) {
+            if ($reflectionClass = $reflectionParameter->getDeclaringClass()) {
+                $info->setReflectionClass($reflectionClass);
+            }
         }
 
         return $reflectionParameter;
@@ -162,349 +197,286 @@ class Reflector
 
 
     /**
-     * @param mixed $reflectable
+     * @param string|object $objectOrClass
+     *
+     * @return \ReflectionClass
+     * @throws ReflectionRuntimeException
+     */
+    public function newReflectionClass($objectOrClass) : \ReflectionClass
+    {
+        try {
+            $result = new \ReflectionClass($objectOrClass);
+        }
+        catch ( \ReflectionException $e ) {
+            throw new ReflectionRuntimeException(
+                [ 'Unable to reflect class: %s', $objectOrClass ], null, $e
+            );
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param string|\Closure $function
+     *
+     * @return \ReflectionFunction
+     * @throws ReflectionRuntimeException
+     */
+    public function newReflectionFunction($function) : ?\ReflectionFunction
+    {
+        try {
+            $reflection = new \ReflectionFunction($function);
+        }
+        catch ( \ReflectionException $e ) {
+            throw new ReflectionRuntimeException(
+                [ 'Unable to reflect function: %s', $function ], null, $e
+            );
+        }
+
+        return $reflection;
+    }
+
+    /**
+     * @param string|object $objectOrMethod
+     * @param string|null   $method
+     *
+     * @return \ReflectionMethod
+     * @throws ReflectionRuntimeException
+     */
+    public function newReflectionMethod($objectOrMethod, $method = null) : \ReflectionMethod
+    {
+        try {
+            $reflection = new \ReflectionMethod($objectOrMethod, $method);
+        }
+        catch ( \ReflectionException $e ) {
+            throw new ReflectionRuntimeException(
+                [ 'Unable to reflect method: %s %s', $objectOrMethod, $method ], null, $e
+            );
+        }
+
+        return $reflection;
+    }
+
+
+    /**
+     * @param string|object $class
+     * @param string        $property
+     *
+     * @return \ReflectionProperty
+     * @throws ReflectionRuntimeException
+     */
+    public function newReflectionProperty($class, $property) : ?\ReflectionProperty
+    {
+        try {
+            $reflection = new \ReflectionProperty($class, $property);
+        }
+        catch ( \ReflectionException $e ) {
+            throw new ReflectionRuntimeException(
+                [ 'Unable to reflect property: %s %s', $class, $property ], null, $e
+            );
+        }
+
+        return $reflection;
+    }
+
+    /**
+     * @param string|array|\Closure|callable $function
+     * @param string|int                     $param
+     *
+     * @return \ReflectionParameter
+     * @throws ReflectionRuntimeException
+     */
+    public function newReflectionParameter($function, $param) : ?\ReflectionParameter
+    {
+        try {
+            $reflection = new \ReflectionParameter($function, $param);
+        }
+        catch ( \ReflectionException $e ) {
+            throw new ReflectionRuntimeException(
+                [ 'Unable to reflect parameter: %s %s', $function, $param ], null, $e
+            );
+        }
+
+        return $reflection;
+    }
+
+
+    /**
+     * @param string|array|callable|\ReflectionMethod $reflectableMethod
+     *
+     * @return null|array
+     * @throws InvalidArgumentException
+     */
+    public function newCallableArrayFromReflectableInvokable($reflectableMethod) : array
+    {
+        $result = null;
+
+        if (null !== ( $callableArray = $this->filter->filterCallableArray($reflectableMethod) )) {
+            $result = $callableArray;
+
+        } elseif (null !== ( $callableStringStatic = $this->filter->filterCallableStringStatic($reflectableMethod) )) {
+            $result = explode('::', $callableStringStatic, 2);
+
+        } elseif (null !== ( $handler = $this->filter->filterHandler($reflectableMethod) )) {
+            $result = explode('@', $handler, 2);
+
+        } else {
+            throw new InvalidArgumentException(
+                [ 'ReflectableMethod should be callable array, callable string static or handler: %s', $reflectableMethod ]
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string|array|callable|\ReflectionMethod $reflectableMethod
+     *
+     * @return null|array
+     * @throws InvalidArgumentException
+     */
+    public function newMethodArrayFromReflectableInvokable($reflectableMethod) : array
+    {
+        $result = null;
+
+        if (null !== ( $methodArray = $this->filter->filterMethodArray($reflectableMethod) )) {
+            $result = $methodArray;
+
+        } elseif (null !== ( $callableStringStatic = $this->filter->filterCallableStringStatic($reflectableMethod) )) {
+            $result = explode('::', $callableStringStatic, 2);
+
+        } elseif (null !== ( $handler = $this->filter->filterHandler($reflectableMethod) )) {
+            $result = explode('@', $handler, 2);
+
+        } else {
+            throw new InvalidArgumentException(
+                [ 'ReflectableMethod should be method array, callable string static or handler: %s', $reflectableMethod ]
+            );
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param \ReflectionClass|\ReflectionMethod|\ReflectionProperty|\ReflectionParameter $reflection
      *
      * @return ReflectorInfo
      * @throws InvalidArgumentException
      */
-    public function newReflectableInfo($reflectable) : ReflectorInfo
+    public function newReflectorInfoFromReflection($reflection) : ReflectorInfo
     {
         $info = new ReflectorInfo();
 
-        if (null !== $this->assert->filterReflectableInstance($reflectable)) {
+        if (null !== ( $reflectionClass = $this->assert->filterReflectionClass($reflection) )) {
+            $info->setReflectionClass($reflectionClass);
+            $info->setClass($reflectionClass->getName());
+
+        } elseif (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflection) )) {
+            $reflectionClass = $reflectionMethod->getDeclaringClass();
+
+            $info->setReflectionClass($reflectionClass);
+            $info->setClass($reflectionClass->getName());
+
+        } elseif (null !== ( $reflectionProperty = $this->assert->filterReflectionProperty($reflection) )) {
+            $reflectionClass = $reflectionProperty->getDeclaringClass();
+
+            $info->setReflectionClass($reflectionClass);
+            $info->setClass($reflectionClass->getName());
+
+        } elseif (null !== ( $reflectionParameter = $this->assert->filterReflectionParameter($reflection) )) {
+            $reflectionClass = $reflectionParameter->getDeclaringClass();
+
+            $info->setReflectionClass($reflectionClass);
+            $info->setClass($reflectionClass->getName());
+
+        } else {
+            throw new InvalidArgumentException([
+                'Reflection should be one of [ %s, %s, %s ]: %s',
+                \ReflectionClass::class,
+                \ReflectionMethod::class,
+                \ReflectionProperty::class,
+                \ReflectionParameter::class,
+                $reflection,
+            ]);
+        }
+
+        return $info;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     *
+     * @return ReflectorInfo
+     * @throws InvalidArgumentException
+     */
+    public function newReflectorInfoFromReflectable($reflectable) : ReflectorInfo
+    {
+        $info = new ReflectorInfo();
+
+        if (null !== ( $reflectionClass = $this->assert->filterReflectionClass($reflectable) )) {
+            $info->setReflectionClass($reflectionClass);
+            $info->setClass($reflectionClass->getName());
+
+        } elseif (null !== $this->assert->filterReflectableInstance($reflectable)) {
             $info->setObject($reflectable);
             $info->setClass(get_class($reflectable));
 
         } elseif (null !== $this->assert->filterReflectableClass($reflectable)) {
             $info->setClass($reflectable);
 
+        } elseif (null !== $this->assert->filterReflectableTrait($reflectable)) {
+            $info->setClass($reflectable);
+
         } else {
-            throw new InvalidArgumentException('Reflectable should be object or class', func_get_args());
+            throw new InvalidArgumentException(
+                [ 'Reflectable should be object, class or trait: %s', $reflectable ]
+            );
         }
 
         return $info;
     }
 
     /**
-     * @param mixed $reflection
+     * @param string|array|\ReflectionMethod $reflectableMethod
      *
      * @return ReflectorInfo
      * @throws InvalidArgumentException
      */
-    public function newReflectableInfoReflection($reflection) : ReflectorInfo
+    public function newReflectorInfoFromReflectableMethod($reflectableMethod) : ReflectorInfo
     {
-        $info = new ReflectorInfo();
+        [ $reflectable ] = $this->newMethodArrayFromReflectableInvokable($reflectableMethod);
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionClass($reflection) ) )
-        ) {
-            $info->setReflectionClass($reflection);
-            $info->setClass($reflection->getName());
-
-        } elseif (null !== ( $reflection = $this->assert->filterReflectionMethod($reflection) )) {
-            $reflectionClass = $reflection->getDeclaringClass();
-
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } elseif (null !== ( $reflection = $this->assert->filterReflectionProperty($reflection) )) {
-            $reflectionClass = $reflection->getDeclaringClass();
-
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } else {
-            throw new InvalidArgumentException('Reflection should be class that implements \Reflector', func_get_args());
-        }
-
-        return $info;
-    }
-
-    /**
-     * @param mixed $reflectableMethod
-     *
-     * @return ReflectorInfo
-     * @throws InvalidArgumentException
-     */
-    public function newReflectableInfoCallableMethod($reflectableMethod) : ReflectorInfo
-    {
-        $reflectable = null;
-
-        if (null !== $this->filter->filterCallableArray($reflectableMethod)) {
-            $reflectable = $reflectableMethod[ 0 ];
-
-        } elseif (null !== $this->filter->filterCallableStringStatic($reflectableMethod)) {
-            [ $reflectable ] = explode('::', $reflectableMethod, 2);
-
-        } else {
-            throw new InvalidArgumentException('ReflectableMethod should be callable string static or array', func_get_args());
-        }
-
-        $info = $this->newReflectableInfo($reflectable);
+        $info = $this->newReflectorInfoFromReflectable($reflectable);
 
         return $info;
     }
 
 
     /**
-     * @param mixed $reflectable
+     * @param string|object|\ReflectionClass $reflectable
+     * @param null|ReflectorInfo             $info
      *
-     * @return \ReflectionClass
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionClass($reflectable) : \ReflectionClass
-    {
-        try {
-            $result = new \ReflectionClass($reflectable);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException('Unable to reflect', func_get_args(), $e);
-        }
-
-        return $result;
-    }
-
-
-    /**
-     * @param mixed $reflectableFunction
-     *
-     * @return \ReflectionFunction
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionFunction($reflectableFunction) : ?\ReflectionFunction
-    {
-        try {
-            $reflection = new \ReflectionFunction($reflectableFunction);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException('Unable to reflect', func_get_args(), $e);
-        }
-
-        return $reflection;
-    }
-
-    /**
-     * @param mixed $reflectableMethod
-     *
-     * @return \ReflectionMethod
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionMethod($reflectableMethod) : \ReflectionMethod
-    {
-        try {
-            $reflection = new \ReflectionMethod($reflectableMethod);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException('Unable to reflect', func_get_args(), $e);
-        }
-
-        return $reflection;
-    }
-
-
-    /**
-     * @param        $reflectable
-     * @param string $propertyName
-     *
-     * @return \ReflectionProperty
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionProperty($reflectable, string $propertyName) : ?\ReflectionProperty
-    {
-        try {
-            $reflection = new \ReflectionProperty($reflectable, $propertyName);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException('Unable to reflect', func_get_args(), $e);
-        }
-
-        return $reflection;
-    }
-
-    /**
-     * @param mixed  $reflectableFunction
-     * @param string $parameterName
-     *
-     * @return \ReflectionParameter
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionParameter($reflectableFunction, string $parameterName) : ?\ReflectionParameter
-    {
-        try {
-            $reflection = new \ReflectionParameter($reflectableFunction, $parameterName);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException('Unable to reflect', func_get_args(), $e);
-        }
-
-        return $reflection;
-    }
-
-
-    /**
-     * @param mixed                  $item
-     * @param string                 $property
-     * @param string|string[]|bool[] ...$tags
-     *
-     * @return bool
-     */
-    public function propertyExists($item, string $property, ...$tags) : bool
-    {
-        try {
-            $info = $this->propertyTags($item, $property);
-        }
-        catch ( \Exception $e ) {
-            return false;
-        }
-
-        if ($tags) {
-            return $this->matchInfoTags($info, ...$tags);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param mixed  $item
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function propertyPresent($item, string $method) : bool
-    {
-        $result = $this->propertyExists($item, $method, static::TAG_DEFAULT,
-            static::TAG_PRESENT
-        );
-
-        return $result;
-    }
-
-    /**
-     * @param mixed  $item
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function propertyDeclared($item, string $method) : bool
-    {
-        $result = $this->propertyExists($item, $method, static::TAG_DEFAULT,
-            static::TAG_DECLARED
-        );
-
-        return $result;
-    }
-
-    /**
-     * @param mixed  $item
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function propertyTrait($item, string $method) : bool
-    {
-        $result = $this->propertyExists($item, $method, static::TAG_TRAIT,
-            static::TAG_TRAIT
-        );
-
-        return $result;
-    }
-
-
-    /**
-     * @param mixed                  $item
-     * @param string                 $method
-     * @param string|string[]|bool[] ...$tags
-     *
-     * @return bool
-     */
-    public function methodExists($item, string $method, ...$tags) : bool
-    {
-        try {
-            $info = $this->methodTags($item, $method);
-        }
-        catch ( \Exception $e ) {
-            return false;
-        }
-
-        if ($tags) {
-            return $this->matchInfoTags($info, ...$tags);
-        }
-
-        return true;
-    }
-
-    /**
-     * @param mixed  $item
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function methodPresent($item, string $method) : bool
-    {
-        $result = $this->methodExists($item, $method,
-            static::TAG_PRESENT
-        );
-
-        return $result;
-    }
-
-    /**
-     * @param mixed  $item
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function methodDeclared($item, string $method) : bool
-    {
-        $result = $this->methodExists($item, $method,
-            static::TAG_DECLARED
-        );
-
-        return $result;
-    }
-
-    /**
-     * @param mixed  $item
-     * @param string $method
-     *
-     * @return bool
-     */
-    public function methodTrait($item, string $method) : bool
-    {
-        $result = $this->methodExists($item, $method,
-            static::TAG_TRAIT
-        );
-
-        return $result;
-    }
-
-
-    /**
-     * @param mixed              $reflectable
-     * @param null|ReflectorInfo $info
-     *
-     * @return \ReflectionClass
+     * @return null|\ReflectionClass
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
     public function reflectClass($reflectable, ReflectorInfo &$info = null) : ?\ReflectionClass
     {
         $result = null;
-        $reflection = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
+        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+            $newInfo = $this->newReflectorInfoFromReflection($reflection);
+
             $info = $info ?? $newInfo;
-            $info->copy($newInfo);
+            $info->sync($newInfo);
 
             $result = $reflection;
 
-        } elseif (0
-            || ( null !== $this->assert->isReflectable($reflectable) )
-        ) {
+        } elseif (null !== $this->assert->filterReflectable($reflectable)) {
             $result = $this->buildReflectionClass($reflectable, $info);
+
         }
 
         return $result;
@@ -512,7 +484,171 @@ class Reflector
 
 
     /**
-     * @param mixed $reflectableFunction
+     * @param string|\ReflectionClass $reflectable
+     * @param null|ReflectorInfo      $info
+     *
+     * @return null|\ReflectionClass
+     * @throws InvalidArgumentException
+     * @throws ReflectionRuntimeException
+     */
+    public function reflectTheClass($reflectable, ReflectorInfo &$info = null) : ?\ReflectionClass
+    {
+        $result = null;
+
+        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+            if (! ( $reflection->isInterface() || $reflection->isTrait() )) {
+                $newInfo = $this->newReflectorInfoFromReflection($reflection);
+
+                $info = $info ?? $newInfo;
+                $info->sync($newInfo);
+
+                $result = $reflection;
+            }
+        } elseif (null !== $this->assert->filterReflectableClass($reflectable)) {
+            $result = $this->buildReflectionClass($reflectable, $info);
+
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string|\ReflectionClass $reflectable
+     * @param null|ReflectorInfo      $info
+     *
+     * @return null|\ReflectionClass
+     * @throws InvalidArgumentException
+     * @throws ReflectionRuntimeException
+     */
+    public function reflectTheInterface($reflectable, ReflectorInfo &$info = null) : ?\ReflectionClass
+    {
+        $result = null;
+
+        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+            if ($reflection->isInterface()) {
+                $newInfo = $this->newReflectorInfoFromReflection($reflection);
+
+                $info = $info ?? $newInfo;
+                $info->sync($newInfo);
+
+                $result = $reflection;
+            }
+        } elseif (null !== $this->assert->filterReflectableInterface($reflectable)) {
+            $result = $this->buildReflectionClass($reflectable, $info);
+
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string|\ReflectionClass $reflectable
+     * @param null|ReflectorInfo      $info
+     *
+     * @return null|\ReflectionClass
+     * @throws InvalidArgumentException
+     * @throws ReflectionRuntimeException
+     */
+    public function reflectTheTrait($reflectable, ReflectorInfo &$info = null) : ?\ReflectionClass
+    {
+        $result = null;
+
+        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+            if ($reflection->isTrait()) {
+                $newInfo = $this->newReflectorInfoFromReflection($reflection);
+
+                $info = $info ?? $newInfo;
+                $info->sync($newInfo);
+
+                $result = $reflection;
+            }
+        } elseif (null !== $this->assert->filterReflectableTrait($reflectable)) {
+            $result = $this->buildReflectionClass($reflectable, $info);
+
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param string|\Closure|\ReflectionFunction $reflectableCallable
+     * @param null|ReflectorInfo                  $info
+     *
+     * @return \ReflectionFunction|\ReflectionMethod|\ReflectionFunctionAbstract
+     * @throws InvalidArgumentException
+     * @throws ReflectionRuntimeException
+     */
+    public function reflectCallable($reflectableCallable, ReflectorInfo &$info = null) : ?\ReflectionFunctionAbstract
+    {
+        $result = null;
+
+        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableCallable) )) {
+            $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+
+            $info = $info ?? $newInfo;
+            $info->sync($newInfo);
+
+            $result = $reflectionMethod;
+
+        } elseif (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableCallable) )) {
+            $result = $reflectionFunction;
+
+        } elseif (( null !== ( $function = $this->filter->filterClosure($reflectableCallable) ) )
+            || ( null !== ( $function = $this->filter->filterCallableStringFunction($reflectableCallable) ) )
+        ) {
+            $result = $this->newReflectionFunction($function);
+
+        } elseif (( null !== ( $reflectableMethod = $this->filter->filterCallableArray($reflectableCallable) ) )
+            || ( null !== ( $reflectableMethod = $this->filter->filterCallableStringStatic($reflectableCallable) ) )
+        ) {
+            $result = $this->buildReflectionMethod($reflectableMethod, $info);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param string|array|\ReflectionMethod $reflectableInvokable
+     * @param null|ReflectorInfo             $info
+     *
+     * @return \ReflectionFunction|\ReflectionMethod|\ReflectionFunctionAbstract
+     * @throws InvalidArgumentException
+     * @throws ReflectionRuntimeException
+     */
+    public function reflectInvokable($reflectableInvokable, ReflectorInfo &$info = null) : ?\ReflectionFunctionAbstract
+    {
+        $result = null;
+
+        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableInvokable) )) {
+            $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+
+            $info = $info ?? $newInfo;
+            $info->sync($newInfo);
+
+            $result = $reflectionMethod;
+
+        } elseif (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableInvokable) )) {
+            $result = $reflectionFunction;
+
+        } elseif (( null !== ( $function = $this->filter->filterClosure($reflectableInvokable) ) )
+            || ( null !== ( $function = $this->filter->filterCallableStringFunction($reflectableInvokable) ) )
+        ) {
+            $result = $this->newReflectionFunction($function);
+
+        } elseif (( null !== ( $reflectableMethod = $this->filter->filterCallableArray($reflectableInvokable) ) )
+            || ( null !== ( $reflectableMethod = $this->filter->filterCallableStringStatic($reflectableInvokable) ) )
+            || ( null !== ( $reflectableMethod = $this->filter->filterHandler($reflectableInvokable) ) )
+        ) {
+            $result = $this->buildReflectionMethod($reflectableMethod, $info);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * @param string|\Closure|\ReflectionFunction $reflectableFunction
      *
      * @return \ReflectionFunction
      * @throws ReflectionRuntimeException
@@ -520,15 +656,12 @@ class Reflector
     public function reflectFunction($reflectableFunction) : ?\ReflectionFunction
     {
         $result = null;
-        $reflection = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionFunction($reflectableFunction) ) )
-        ) {
-            $result = $reflection;
+        if (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableFunction) )) {
+            $result = $reflectionFunction;
 
-        } elseif (0
-            || ( null !== $this->assert->isReflectableFunction($reflectableFunction) )
+        } elseif (( null !== ( $function = $this->filter->filterClosure($reflectableFunction) ) )
+            || ( null !== ( $function = $this->filter->filterCallableStringFunction($reflectableFunction) ) )
         ) {
             $result = $this->newReflectionFunction($reflectableFunction);
         }
@@ -537,8 +670,8 @@ class Reflector
     }
 
     /**
-     * @param mixed              $reflectableMethod
-     * @param null|ReflectorInfo $info
+     * @param string|array|\ReflectionMethod $reflectableMethod
+     * @param null|ReflectorInfo             $info
      *
      * @return \ReflectionMethod
      * @throws InvalidArgumentException
@@ -547,19 +680,19 @@ class Reflector
     public function reflectMethod($reflectableMethod, ReflectorInfo &$info = null) : ?\ReflectionMethod
     {
         $result = null;
-        $reflection = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionMethod($reflectableMethod) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
+        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableMethod) )) {
+            $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+
             $info = $info ?? $newInfo;
-            $info->copy($newInfo);
+            $info->sync($newInfo);
 
-            $result = $reflection;
+            $result = $reflectionMethod;
 
         } elseif (0
-            || ( null !== $this->assert->isReflectableMethod($reflectableMethod) )
+            || ( null !== $this->filter->filterMethodArray($reflectableMethod) )
+            || ( null !== $this->filter->filterCallableStringStatic($reflectableMethod) )
+            || ( null !== $this->filter->filterHandler($reflectableMethod) )
         ) {
             $result = $this->buildReflectionMethod($reflectableMethod, $info);
         }
@@ -569,7 +702,7 @@ class Reflector
 
 
     /**
-     * @param mixed $reflectableClosure
+     * @param \Closure|\ReflectionFunction $reflectableClosure
      *
      * @return \ReflectionFunction
      * @throws ReflectionRuntimeException
@@ -577,17 +710,13 @@ class Reflector
     public function reflectClosure($reflectableClosure) : ?\ReflectionFunction
     {
         $result = null;
-        $reflection = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionFunction($reflectableClosure) ) )
-        ) {
-            $result = $reflection;
-
-        } elseif (0
-            || ( null !== $this->filter->filterClosure($reflectableClosure) )
-        ) {
-            $result = $this->newReflectionFunction($reflectableClosure);
+        if (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableClosure) )) {
+            if ($reflectionFunction->isClosure()) {
+                $result = $reflectionFunction;
+            }
+        } elseif (null !== ( $function = $this->filter->filterClosure($reflectableClosure) )) {
+            $result = $this->newReflectionFunction($function);
         }
 
         return $result;
@@ -595,88 +724,28 @@ class Reflector
 
 
     /**
-     * @param mixed $reflectableFunction
-     *
-     * @return \ReflectionFunction
-     * @throws ReflectionRuntimeException
-     */
-    public function reflectCallableFunction($reflectableFunction) : ?\ReflectionFunction
-    {
-        $result = null;
-        $reflection = null;
-
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionFunction($reflectableFunction) ) )
-        ) {
-            $result = $reflection;
-
-        } elseif (0
-            || ( null !== $this->filter->filterClosure($reflectableFunction) )
-            || ( null !== $this->filter->filterCallableStringFunction($reflectableFunction) )
-        ) {
-            $result = $this->newReflectionFunction($reflectableFunction);
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param mixed              $reflectableMethod
-     * @param null|ReflectorInfo $info
+     * @param string|array|\ReflectionMethod $reflectableMethod
+     * @param null|ReflectorInfo             $info
      *
      * @return \ReflectionMethod
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
-    public function reflectCallableMethod($reflectableMethod, ReflectorInfo &$info = null) : ?\ReflectionMethod
+    public function reflectMethodStatic($reflectableMethod, ReflectorInfo &$info = null) : ?\ReflectionMethod
     {
         $result = null;
-        $reflection = null;
+        $reflectionMethod = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionMethod($reflectableMethod) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
-            $info = $info ?? $newInfo;
-            $info->copy($newInfo);
+        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableMethod) )) {
+            if ($reflectionMethod->isStatic()) {
+                $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
 
-            $result = $reflection;
+                $info = $info ?? $newInfo;
+                $info->sync($newInfo);
 
-        } elseif (0
-            || ( null !== $this->filter->filterCallableArray($reflectableMethod) )
-            || ( null !== $this->filter->filterCallableStringStatic($reflectableMethod) )
-        ) {
-            $result = $this->buildReflectionMethod($reflectableMethod, $info);
-        }
-
-        return $result;
-    }
-
-
-    /**
-     * @param mixed              $reflectableMethod
-     * @param null|ReflectorInfo $info
-     *
-     * @return \ReflectionMethod
-     * @throws InvalidArgumentException
-     * @throws ReflectionRuntimeException
-     */
-    public function reflectCallableMethodStatic($reflectableMethod, ReflectorInfo &$info = null) : ?\ReflectionMethod
-    {
-        $result = null;
-        $reflection = null;
-
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionMethod($reflectableMethod) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
-            $info = $info ?? $newInfo;
-            $info->copy($newInfo);
-
-            $result = $reflection;
-
-        } elseif (0
-            || ( null !== $this->filter->filterCallableArrayStatic($reflectableMethod) )
+                $result = $reflectionMethod;
+            }
+        } elseif (( null !== $this->filter->filterCallableArrayStatic($reflectableMethod) )
             || ( null !== $this->filter->filterCallableStringStatic($reflectableMethod) )
         ) {
             $result = $this->buildReflectionMethod($reflectableMethod, $info);
@@ -686,29 +755,28 @@ class Reflector
     }
 
     /**
-     * @param mixed              $reflectableMethod
-     * @param null|ReflectorInfo $info
+     * @param string|array|\ReflectionMethod $reflectableMethod
+     * @param null|ReflectorInfo             $info
      *
      * @return \ReflectionMethod
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
-    public function reflectCallableMethodPublic($reflectableMethod, ReflectorInfo &$info = null) : ?\ReflectionMethod
+    public function reflectMethodPublic($reflectableMethod, ReflectorInfo &$info = null) : ?\ReflectionMethod
     {
         $result = null;
-        $reflection = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionMethod($reflectableMethod) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
-            $info = $info ?? $newInfo;
-            $info->copy($newInfo);
+        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableMethod) )) {
+            if ($reflectionMethod->isPublic()) {
+                $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
 
-            $result = $reflection;
+                $info = $info ?? $newInfo;
+                $info->sync($newInfo);
 
-        } elseif (0
-            || ( null !== $this->filter->filterCallableArrayPublic($reflectableMethod) )
+                $result = $reflectionMethod;
+            }
+        } elseif (( null !== $this->filter->filterCallableArrayPublic($reflectableMethod) )
+            || ( null !== $this->filter->filterHandler($reflectableMethod) )
         ) {
             $result = $this->buildReflectionMethod($reflectableMethod, $info);
         }
@@ -718,67 +786,198 @@ class Reflector
 
 
     /**
-     * @param mixed              $reflectable
-     * @param string             $propertyName
-     * @param null|ReflectorInfo $info
+     * @param string|object|\ReflectionClass|\ReflectionProperty $reflectableOrProperty
+     * @param null|string                                        $propertyName
+     * @param null|ReflectorInfo                                 $info
      *
      * @return \ReflectionProperty
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
-    public function reflectProperty($reflectable, string $propertyName, ReflectorInfo &$info = null) : ?\ReflectionProperty
+    public function reflectProperty($reflectableOrProperty, string $propertyName = null, ReflectorInfo &$info = null) : ?\ReflectionProperty
     {
         $result = null;
-        $reflection = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionProperty($reflectable) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
+        if (null !== ( $reflectionProperty = $this->assert->filterReflectionProperty($reflectableOrProperty) )) {
+            $newInfo = $this->newReflectorInfoFromReflection($reflectionProperty);
+
             $info = $info ?? $newInfo;
-            $info->copy($newInfo);
+            $info->sync($newInfo);
 
-            $result = $reflection;
+            $result = $reflectionProperty;
 
-        } elseif (1
-            && ( '' !== $propertyName )
-            && ( null !== $this->assert->isReflectable($reflectable) )
+        } elseif (( null !== $this->filter->filterWord($propertyName) )
+            && ( null !== ( $reflectable = $this->assert->filterReflectable($reflectableOrProperty) ) )
         ) {
-            $result = $this->buildReflectionProperty($reflectable, $propertyName, $info);
+            $result = $this->buildReflectionProperty($reflectableOrProperty, $propertyName, $info);
         }
 
         return $result;
     }
 
     /**
-     * @param mixed              $reflectableCallable
-     * @param string             $parameterName
-     * @param null|ReflectorInfo $info
+     * @param string|array|\ReflectionFunction|\ReflectionMethod $reflectableInvokableOrParameter
+     * @param null|int|string                                    $parameter
+     * @param null|ReflectorInfo                                 $info
      *
      * @return \ReflectionParameter
      * @throws InvalidArgumentException
      * @throws ReflectionRuntimeException
      */
-    public function reflectParameter($reflectableCallable, string $parameterName, ReflectorInfo &$info = null) : ?\ReflectionParameter
+    public function reflectParameter($reflectableInvokableOrParameter, $parameter = null, ReflectorInfo &$info = null) : ?\ReflectionParameter
     {
         $result = null;
-        $reflection = null;
+        $reflectionParameter = null;
 
-        if (0
-            || ( null !== ( $reflection = $this->assert->filterReflectionParameter($reflectableCallable) ) )
-        ) {
-            $newInfo = $this->newReflectableInfoReflection($reflection);
+        if (null !== ( $reflectionParameter = $this->assert->filterReflectionParameter($reflectableInvokableOrParameter) )) {
+            $newInfo = $this->newReflectorInfoFromReflection($reflectionParameter);
+
             $info = $info ?? $newInfo;
-            $info->copy($newInfo);
+            $info->sync($newInfo);
 
-            $result = $reflection;
+            $result = $reflectionParameter;
 
-        } elseif (1
-            && ( '' !== $parameterName )
-            && ( null !== $this->assert->isReflectableCallable($reflectableCallable) )
-        ) {
-            $result = $this->buildReflectionParameter($reflectableCallable, $parameterName, $info);
+        } elseif (null !== $this->filter->filterWordOrInt($parameter)) {
+            $result = $this->buildReflectionParameter($reflectableInvokableOrParameter, $parameter, $info);
         }
+
+        return $result;
+    }
+
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $property
+     * @param string|string[]|bool[]         ...$tags
+     *
+     * @return bool
+     */
+    public function propertyExists($reflectable, string $property, ...$tags) : bool
+    {
+        try {
+            $info = $this->propertyTags($reflectable, $property);
+        }
+        catch ( \Exception $e ) {
+            return false;
+        }
+
+        if ($tags) {
+            return $this->matchInfoTags($info, ...$tags);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     *
+     * @return bool
+     */
+    public function propertyPresent($reflectable, string $method) : bool
+    {
+        $result = $this->propertyExists($reflectable, $method, static::TAG_DEFAULT,
+            static::TAG_PRESENT
+        );
+
+        return $result;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     *
+     * @return bool
+     */
+    public function propertyDeclared($reflectable, string $method) : bool
+    {
+        $result = $this->propertyExists($reflectable, $method, static::TAG_DEFAULT,
+            static::TAG_DECLARED
+        );
+
+        return $result;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     *
+     * @return bool
+     */
+    public function propertyTrait($reflectable, string $method) : bool
+    {
+        $result = $this->propertyExists($reflectable, $method, static::TAG_TRAIT,
+            static::TAG_TRAIT
+        );
+
+        return $result;
+    }
+
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     * @param string|string[]|bool[]         ...$tags
+     *
+     * @return bool
+     */
+    public function methodExists($reflectable, string $method, ...$tags) : bool
+    {
+        try {
+            $info = $this->methodTags($reflectable, $method);
+        }
+        catch ( \Exception $e ) {
+            return false;
+        }
+
+        if ($tags) {
+            return $this->matchInfoTags($info, ...$tags);
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     *
+     * @return bool
+     */
+    public function methodPresent($reflectable, string $method) : bool
+    {
+        $result = $this->methodExists($reflectable, $method,
+            static::TAG_PRESENT
+        );
+
+        return $result;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     *
+     * @return bool
+     */
+    public function methodDeclared($reflectable, string $method) : bool
+    {
+        $result = $this->methodExists($reflectable, $method,
+            static::TAG_DECLARED
+        );
+
+        return $result;
+    }
+
+    /**
+     * @param string|object|\ReflectionClass $reflectable
+     * @param string                         $method
+     *
+     * @return bool
+     */
+    public function methodTrait($reflectable, string $method) : bool
+    {
+        $result = $this->methodExists($reflectable, $method,
+            static::TAG_TRAIT
+        );
 
         return $result;
     }
@@ -842,9 +1041,9 @@ class Reflector
     {
         $reflectionTags = [];
 
-        $reflectionCallable = [ $reflectable, $method ];
+        $callableArray = [ $reflectable, $method ];
 
-        $rm = $this->reflectMethod($reflectionCallable, $info);
+        $rm = $this->reflectMethod($callableArray, $info);
 
         $declaringClass = $rm->getDeclaringClass();
 

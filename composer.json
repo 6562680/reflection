@@ -12,14 +12,21 @@
   ],
   
   "require": {
-    "php": ">=7.1",
+    "php": ">=7.3",
+    
+    "ext-json": "*",
+    
+    "symfony/property-access": "^5.2",
+    "symfony/property-info": "^5.2",
+    
+    "phpdocumentor/reflection-docblock": "^5.2",
     
     "gzhegow/support": "~1.0"
   },
   "require-dev": {
     "phpunit/phpunit": "~9.0",
     
-    "symfony/var-dumper": "~5.0"
+    "gzhegow/var-dumper": "~1.0"
   },
   
   "autoload": {

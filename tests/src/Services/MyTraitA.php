@@ -9,24 +9,25 @@ trait MyTraitA
     {
     }
 
-    public function methodProtectedTrait()
-    {
-    }
-
-    public function methodPrivateTrait()
-    {
-    }
-
-
     final public function methodPublicFinalTrait()
     {
     }
 
-    final public function methodProtectedFinalTrait()
+
+    protected function methodProtectedTrait()
     {
     }
 
-    final public function methodPrivateFinalTrait()
+    final protected function methodProtectedFinalTrait()
+    {
+    }
+
+
+    private function methodPrivateTrait()
+    {
+    }
+
+    final private function methodPrivateFinalTrait()
     {
     }
 
@@ -35,24 +36,25 @@ trait MyTraitA
     {
     }
 
-    public static function methodProtectedStaticTrait()
-    {
-    }
-
-    public static function methodPrivateStaticTrait()
-    {
-    }
-
-
     final public static function methodPublicStaticFinalTrait()
     {
     }
 
-    final public static function methodProtectedStaticFinalTrait()
+
+    protected static function methodProtectedStaticTrait()
     {
     }
 
-    final public static function methodPrivateStaticFinalTrait()
+    final protected static function methodProtectedStaticFinalTrait()
+    {
+    }
+
+
+    private static function methodPrivateStaticTrait()
+    {
+    }
+
+    final private static function methodPrivateStaticFinalTrait()
     {
     }
 }
