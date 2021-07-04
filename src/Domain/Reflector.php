@@ -4,7 +4,7 @@ namespace Gzhegow\Reflection\Domain;
 
 use Gzhegow\Support\Php;
 use Gzhegow\Support\Filter;
-use Gzhegow\Reflection\Assert;
+use Gzhegow\Reflection\ReflectionFactory;
 use Gzhegow\Reflection\Exceptions\Logic\InvalidArgumentException;
 use Gzhegow\Reflection\Exceptions\Runtime\ReflectionRuntimeException;
 
@@ -49,29 +49,30 @@ class Reflector
     protected $php;
 
     /**
-     * @var Assert
+     * @var ReflectionFactory
      */
-    protected $assert;
+    protected $reflectionFactory;
 
 
     /**
      * Constructor
      *
-     * @param Filter $filter
-     * @param Php    $php
-     * @param Assert $assert
+     * @param Filter            $filter
+     * @param Php               $php
+     *
+     * @param ReflectionFactory $reflectionFactory
      */
     public function __construct(
         Filter $filter,
         Php $php,
 
-        Assert $assert
+        ReflectionFactory $reflectionFactory
     )
     {
         $this->filter = $filter;
         $this->php = $php;
 
-        $this->assert = $assert;
+        $this->reflectionFactory = $reflectionFactory;
     }
 
 
@@ -86,15 +87,14 @@ class Reflector
     protected function buildReflectionClass($reflectable, ReflectorInfo &$info = null) : \ReflectionClass
     {
         $info = $info
-            ?? $this->newReflectorInfoFromReflectable($reflectable);
+            ?? $this->reflectionFactory->newReflectorInfoFromReflectable($reflectable);
 
-        $reflectionClass = $this->newReflectionClass($reflectable);
+        $reflectionClass = $this->reflectionFactory->newReflectionClass($reflectable);
 
         $info->setReflectionClass($reflectionClass);
 
         return $reflectionClass;
     }
-
 
     /**
      * @param string|array|\ReflectionMethod $reflectableMethod
@@ -106,18 +106,17 @@ class Reflector
      */
     protected function buildReflectionMethod($reflectableMethod, ReflectorInfo &$info = null) : \ReflectionMethod
     {
-        $methodArray = $this->newMethodArrayFromReflectableInvokable($reflectableMethod);
+        $methodArray = $this->reflectionFactory->newMethodArrayFromReflectableInvokable($reflectableMethod);
 
         $info = $info
-            ?? $this->newReflectorInfoFromReflectableMethod($methodArray);
+            ?? $this->reflectionFactory->newReflectorInfoFromReflectableMethod($methodArray);
 
-        $reflectionMethod = $this->newReflectionMethod($methodArray[ 0 ], $methodArray[ 1 ]);
+        $reflectionMethod = $this->reflectionFactory->newReflectionMethod($methodArray[ 0 ], $methodArray[ 1 ]);
 
         $info->setReflectionClass($reflectionMethod->getDeclaringClass());
 
         return $reflectionMethod;
     }
-
 
     /**
      * @param string|object|\ReflectionClass $reflectable
@@ -137,9 +136,9 @@ class Reflector
         }
 
         $info = $info
-            ?? $this->newReflectorInfoFromReflectable($reflectable);
+            ?? $this->reflectionFactory->newReflectorInfoFromReflectable($reflectable);
 
-        if (null !== ( $reflectionClass = $this->assert->filterReflectionClass($reflectable) )) {
+        if (null !== ( $reflectionClass = $this->reflectionFactory->filterReflectionClass($reflectable) )) {
             try {
                 $reflectionProperty = $reflectionClass->getProperty($propertyName);
             }
@@ -149,7 +148,7 @@ class Reflector
                 );
             }
         } else {
-            $reflectionProperty = $this->newReflectionProperty($reflectable, $propertyName);
+            $reflectionProperty = $this->reflectionFactory->newReflectionProperty($reflectable, $propertyName);
         }
 
         return $reflectionProperty;
@@ -172,19 +171,19 @@ class Reflector
             );
         }
 
-        $methodArray = $this->newMethodArrayFromReflectableInvokable($reflectableInvokable);
+        $methodArray = $this->reflectionFactory->newMethodArrayFromReflectableInvokable($reflectableInvokable);
 
         $hasInfo = ( null !== $info );
 
         if (! $hasInfo
-            && ( null !== $this->assert->filterReflectableMethod($reflectableInvokable) )
+            && ( null !== $this->reflectionFactory->filterReflectableMethod($reflectableInvokable) )
         ) {
-            $info = $this->newReflectorInfoFromReflectableMethod($reflectableInvokable);
+            $info = $this->reflectionFactory->newReflectorInfoFromReflectableMethod($reflectableInvokable);
 
             $hasInfo = true;
         }
 
-        $reflectionParameter = $this->newReflectionParameter($methodArray, $parameter);
+        $reflectionParameter = $this->reflectionFactory->newReflectionParameter($methodArray, $parameter);
 
         if ($hasInfo) {
             if ($reflectionClass = $reflectionParameter->getDeclaringClass()) {
@@ -197,260 +196,11 @@ class Reflector
 
 
     /**
-     * @param string|object $objectOrClass
-     *
-     * @return \ReflectionClass
-     * @throws ReflectionRuntimeException
+     * @return ReflectionFactory
      */
-    public function newReflectionClass($objectOrClass) : \ReflectionClass
+    public function getReflectionFactory() : ReflectionFactory
     {
-        try {
-            $result = new \ReflectionClass($objectOrClass);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException(
-                [ 'Unable to reflect class: %s', $objectOrClass ], null, $e
-            );
-        }
-
-        return $result;
-    }
-
-
-    /**
-     * @param string|\Closure $function
-     *
-     * @return \ReflectionFunction
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionFunction($function) : ?\ReflectionFunction
-    {
-        try {
-            $reflection = new \ReflectionFunction($function);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException(
-                [ 'Unable to reflect function: %s', $function ], null, $e
-            );
-        }
-
-        return $reflection;
-    }
-
-    /**
-     * @param string|object $objectOrMethod
-     * @param string|null   $method
-     *
-     * @return \ReflectionMethod
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionMethod($objectOrMethod, $method = null) : \ReflectionMethod
-    {
-        try {
-            $reflection = new \ReflectionMethod($objectOrMethod, $method);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException(
-                [ 'Unable to reflect method: %s %s', $objectOrMethod, $method ], null, $e
-            );
-        }
-
-        return $reflection;
-    }
-
-
-    /**
-     * @param string|object $class
-     * @param string        $property
-     *
-     * @return \ReflectionProperty
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionProperty($class, $property) : ?\ReflectionProperty
-    {
-        try {
-            $reflection = new \ReflectionProperty($class, $property);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException(
-                [ 'Unable to reflect property: %s %s', $class, $property ], null, $e
-            );
-        }
-
-        return $reflection;
-    }
-
-    /**
-     * @param string|array|\Closure|callable $function
-     * @param string|int                     $param
-     *
-     * @return \ReflectionParameter
-     * @throws ReflectionRuntimeException
-     */
-    public function newReflectionParameter($function, $param) : ?\ReflectionParameter
-    {
-        try {
-            $reflection = new \ReflectionParameter($function, $param);
-        }
-        catch ( \ReflectionException $e ) {
-            throw new ReflectionRuntimeException(
-                [ 'Unable to reflect parameter: %s %s', $function, $param ], null, $e
-            );
-        }
-
-        return $reflection;
-    }
-
-
-    /**
-     * @param string|array|callable|\ReflectionMethod $reflectableMethod
-     *
-     * @return null|array
-     * @throws InvalidArgumentException
-     */
-    public function newCallableArrayFromReflectableInvokable($reflectableMethod) : array
-    {
-        $result = null;
-
-        if (null !== ( $callableArray = $this->filter->filterCallableArray($reflectableMethod) )) {
-            $result = $callableArray;
-
-        } elseif (null !== ( $callableStringStatic = $this->filter->filterCallableStringStatic($reflectableMethod) )) {
-            $result = explode('::', $callableStringStatic, 2);
-
-        } elseif (null !== ( $handler = $this->filter->filterHandler($reflectableMethod) )) {
-            $result = explode('@', $handler, 2);
-
-        } else {
-            throw new InvalidArgumentException(
-                [ 'ReflectableMethod should be callable array, callable string static or handler: %s', $reflectableMethod ]
-            );
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param string|array|callable|\ReflectionMethod $reflectableMethod
-     *
-     * @return null|array
-     * @throws InvalidArgumentException
-     */
-    public function newMethodArrayFromReflectableInvokable($reflectableMethod) : array
-    {
-        $result = null;
-
-        if (null !== ( $methodArray = $this->filter->filterMethodArray($reflectableMethod) )) {
-            $result = $methodArray;
-
-        } elseif (null !== ( $callableStringStatic = $this->filter->filterCallableStringStatic($reflectableMethod) )) {
-            $result = explode('::', $callableStringStatic, 2);
-
-        } elseif (null !== ( $handler = $this->filter->filterHandler($reflectableMethod) )) {
-            $result = explode('@', $handler, 2);
-
-        } else {
-            throw new InvalidArgumentException(
-                [ 'ReflectableMethod should be method array, callable string static or handler: %s', $reflectableMethod ]
-            );
-        }
-
-        return $result;
-    }
-
-
-    /**
-     * @param \ReflectionClass|\ReflectionMethod|\ReflectionProperty|\ReflectionParameter $reflection
-     *
-     * @return ReflectorInfo
-     * @throws InvalidArgumentException
-     */
-    public function newReflectorInfoFromReflection($reflection) : ReflectorInfo
-    {
-        $info = new ReflectorInfo();
-
-        if (null !== ( $reflectionClass = $this->assert->filterReflectionClass($reflection) )) {
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } elseif (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflection) )) {
-            $reflectionClass = $reflectionMethod->getDeclaringClass();
-
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } elseif (null !== ( $reflectionProperty = $this->assert->filterReflectionProperty($reflection) )) {
-            $reflectionClass = $reflectionProperty->getDeclaringClass();
-
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } elseif (null !== ( $reflectionParameter = $this->assert->filterReflectionParameter($reflection) )) {
-            $reflectionClass = $reflectionParameter->getDeclaringClass();
-
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } else {
-            throw new InvalidArgumentException([
-                'Reflection should be one of [ %s, %s, %s ]: %s',
-                \ReflectionClass::class,
-                \ReflectionMethod::class,
-                \ReflectionProperty::class,
-                \ReflectionParameter::class,
-                $reflection,
-            ]);
-        }
-
-        return $info;
-    }
-
-    /**
-     * @param string|object|\ReflectionClass $reflectable
-     *
-     * @return ReflectorInfo
-     * @throws InvalidArgumentException
-     */
-    public function newReflectorInfoFromReflectable($reflectable) : ReflectorInfo
-    {
-        $info = new ReflectorInfo();
-
-        if (null !== ( $reflectionClass = $this->assert->filterReflectionClass($reflectable) )) {
-            $info->setReflectionClass($reflectionClass);
-            $info->setClass($reflectionClass->getName());
-
-        } elseif (null !== $this->assert->filterReflectableInstance($reflectable)) {
-            $info->setObject($reflectable);
-            $info->setClass(get_class($reflectable));
-
-        } elseif (null !== $this->assert->filterReflectableClass($reflectable)) {
-            $info->setClass($reflectable);
-
-        } elseif (null !== $this->assert->filterReflectableTrait($reflectable)) {
-            $info->setClass($reflectable);
-
-        } else {
-            throw new InvalidArgumentException(
-                [ 'Reflectable should be object, class or trait: %s', $reflectable ]
-            );
-        }
-
-        return $info;
-    }
-
-    /**
-     * @param string|array|\ReflectionMethod $reflectableMethod
-     *
-     * @return ReflectorInfo
-     * @throws InvalidArgumentException
-     */
-    public function newReflectorInfoFromReflectableMethod($reflectableMethod) : ReflectorInfo
-    {
-        [ $reflectable ] = $this->newMethodArrayFromReflectableInvokable($reflectableMethod);
-
-        $info = $this->newReflectorInfoFromReflectable($reflectable);
-
-        return $info;
+        return $this->reflectionFactory;
     }
 
 
@@ -466,15 +216,15 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
-            $newInfo = $this->newReflectorInfoFromReflection($reflection);
+        if (null !== ( $reflection = $this->reflectionFactory->filterReflectionClass($reflectable) )) {
+            $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflection);
 
             $info = $info ?? $newInfo;
             $info->sync($newInfo);
 
             $result = $reflection;
 
-        } elseif (null !== $this->assert->filterReflectable($reflectable)) {
+        } elseif (null !== $this->reflectionFactory->filterReflectable($reflectable)) {
             $result = $this->buildReflectionClass($reflectable, $info);
 
         }
@@ -495,16 +245,16 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+        if (null !== ( $reflection = $this->reflectionFactory->filterReflectionClass($reflectable) )) {
             if (! ( $reflection->isInterface() || $reflection->isTrait() )) {
-                $newInfo = $this->newReflectorInfoFromReflection($reflection);
+                $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflection);
 
                 $info = $info ?? $newInfo;
                 $info->sync($newInfo);
 
                 $result = $reflection;
             }
-        } elseif (null !== $this->assert->filterReflectableClass($reflectable)) {
+        } elseif (null !== $this->reflectionFactory->filterReflectableClass($reflectable)) {
             $result = $this->buildReflectionClass($reflectable, $info);
 
         }
@@ -524,16 +274,16 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+        if (null !== ( $reflection = $this->reflectionFactory->filterReflectionClass($reflectable) )) {
             if ($reflection->isInterface()) {
-                $newInfo = $this->newReflectorInfoFromReflection($reflection);
+                $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflection);
 
                 $info = $info ?? $newInfo;
                 $info->sync($newInfo);
 
                 $result = $reflection;
             }
-        } elseif (null !== $this->assert->filterReflectableInterface($reflectable)) {
+        } elseif (null !== $this->reflectionFactory->filterReflectableInterface($reflectable)) {
             $result = $this->buildReflectionClass($reflectable, $info);
 
         }
@@ -553,16 +303,16 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflection = $this->assert->filterReflectionClass($reflectable) )) {
+        if (null !== ( $reflection = $this->reflectionFactory->filterReflectionClass($reflectable) )) {
             if ($reflection->isTrait()) {
-                $newInfo = $this->newReflectorInfoFromReflection($reflection);
+                $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflection);
 
                 $info = $info ?? $newInfo;
                 $info->sync($newInfo);
 
                 $result = $reflection;
             }
-        } elseif (null !== $this->assert->filterReflectableTrait($reflectable)) {
+        } elseif (null !== $this->reflectionFactory->filterReflectableTrait($reflectable)) {
             $result = $this->buildReflectionClass($reflectable, $info);
 
         }
@@ -583,21 +333,21 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableCallable) )) {
-            $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+        if (null !== ( $reflectionMethod = $this->reflectionFactory->filterReflectionMethod($reflectableCallable) )) {
+            $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionMethod);
 
             $info = $info ?? $newInfo;
             $info->sync($newInfo);
 
             $result = $reflectionMethod;
 
-        } elseif (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableCallable) )) {
+        } elseif (null !== ( $reflectionFunction = $this->reflectionFactory->filterReflectionFunction($reflectableCallable) )) {
             $result = $reflectionFunction;
 
         } elseif (( null !== ( $function = $this->filter->filterClosure($reflectableCallable) ) )
             || ( null !== ( $function = $this->filter->filterCallableStringFunction($reflectableCallable) ) )
         ) {
-            $result = $this->newReflectionFunction($function);
+            $result = $this->reflectionFactory->newReflectionFunction($function);
 
         } elseif (( null !== ( $reflectableMethod = $this->filter->filterCallableArray($reflectableCallable) ) )
             || ( null !== ( $reflectableMethod = $this->filter->filterCallableStringStatic($reflectableCallable) ) )
@@ -620,21 +370,21 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableInvokable) )) {
-            $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+        if (null !== ( $reflectionMethod = $this->reflectionFactory->filterReflectionMethod($reflectableInvokable) )) {
+            $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionMethod);
 
             $info = $info ?? $newInfo;
             $info->sync($newInfo);
 
             $result = $reflectionMethod;
 
-        } elseif (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableInvokable) )) {
+        } elseif (null !== ( $reflectionFunction = $this->reflectionFactory->filterReflectionFunction($reflectableInvokable) )) {
             $result = $reflectionFunction;
 
         } elseif (( null !== ( $function = $this->filter->filterClosure($reflectableInvokable) ) )
             || ( null !== ( $function = $this->filter->filterCallableStringFunction($reflectableInvokable) ) )
         ) {
-            $result = $this->newReflectionFunction($function);
+            $result = $this->reflectionFactory->newReflectionFunction($function);
 
         } elseif (( null !== ( $reflectableMethod = $this->filter->filterCallableArray($reflectableInvokable) ) )
             || ( null !== ( $reflectableMethod = $this->filter->filterCallableStringStatic($reflectableInvokable) ) )
@@ -657,13 +407,13 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableFunction) )) {
+        if (null !== ( $reflectionFunction = $this->reflectionFactory->filterReflectionFunction($reflectableFunction) )) {
             $result = $reflectionFunction;
 
         } elseif (( null !== ( $function = $this->filter->filterClosure($reflectableFunction) ) )
             || ( null !== ( $function = $this->filter->filterCallableStringFunction($reflectableFunction) ) )
         ) {
-            $result = $this->newReflectionFunction($reflectableFunction);
+            $result = $this->reflectionFactory->newReflectionFunction($reflectableFunction);
         }
 
         return $result;
@@ -681,8 +431,8 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableMethod) )) {
-            $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+        if (null !== ( $reflectionMethod = $this->reflectionFactory->filterReflectionMethod($reflectableMethod) )) {
+            $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionMethod);
 
             $info = $info ?? $newInfo;
             $info->sync($newInfo);
@@ -711,12 +461,12 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionFunction = $this->assert->filterReflectionFunction($reflectableClosure) )) {
+        if (null !== ( $reflectionFunction = $this->reflectionFactory->filterReflectionFunction($reflectableClosure) )) {
             if ($reflectionFunction->isClosure()) {
                 $result = $reflectionFunction;
             }
         } elseif (null !== ( $function = $this->filter->filterClosure($reflectableClosure) )) {
-            $result = $this->newReflectionFunction($function);
+            $result = $this->reflectionFactory->newReflectionFunction($function);
         }
 
         return $result;
@@ -736,9 +486,9 @@ class Reflector
         $result = null;
         $reflectionMethod = null;
 
-        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableMethod) )) {
+        if (null !== ( $reflectionMethod = $this->reflectionFactory->filterReflectionMethod($reflectableMethod) )) {
             if ($reflectionMethod->isStatic()) {
-                $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+                $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionMethod);
 
                 $info = $info ?? $newInfo;
                 $info->sync($newInfo);
@@ -766,9 +516,9 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionMethod = $this->assert->filterReflectionMethod($reflectableMethod) )) {
+        if (null !== ( $reflectionMethod = $this->reflectionFactory->filterReflectionMethod($reflectableMethod) )) {
             if ($reflectionMethod->isPublic()) {
-                $newInfo = $this->newReflectorInfoFromReflection($reflectionMethod);
+                $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionMethod);
 
                 $info = $info ?? $newInfo;
                 $info->sync($newInfo);
@@ -798,8 +548,8 @@ class Reflector
     {
         $result = null;
 
-        if (null !== ( $reflectionProperty = $this->assert->filterReflectionProperty($reflectableOrProperty) )) {
-            $newInfo = $this->newReflectorInfoFromReflection($reflectionProperty);
+        if (null !== ( $reflectionProperty = $this->reflectionFactory->filterReflectionProperty($reflectableOrProperty) )) {
+            $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionProperty);
 
             $info = $info ?? $newInfo;
             $info->sync($newInfo);
@@ -807,7 +557,7 @@ class Reflector
             $result = $reflectionProperty;
 
         } elseif (( null !== $this->filter->filterWord($propertyName) )
-            && ( null !== ( $reflectable = $this->assert->filterReflectable($reflectableOrProperty) ) )
+            && ( null !== ( $reflectable = $this->reflectionFactory->filterReflectable($reflectableOrProperty) ) )
         ) {
             $result = $this->buildReflectionProperty($reflectableOrProperty, $propertyName, $info);
         }
@@ -829,8 +579,8 @@ class Reflector
         $result = null;
         $reflectionParameter = null;
 
-        if (null !== ( $reflectionParameter = $this->assert->filterReflectionParameter($reflectableInvokableOrParameter) )) {
-            $newInfo = $this->newReflectorInfoFromReflection($reflectionParameter);
+        if (null !== ( $reflectionParameter = $this->reflectionFactory->filterReflectionParameter($reflectableInvokableOrParameter) )) {
+            $newInfo = $this->reflectionFactory->newReflectorInfoFromReflection($reflectionParameter);
 
             $info = $info ?? $newInfo;
             $info->sync($newInfo);
@@ -842,6 +592,32 @@ class Reflector
         }
 
         return $result;
+    }
+
+
+    /**
+     * @param \ReflectionParameter|\ReflectionProperty $reflectionParameterOrProperty
+     *
+     * @return null|\ReflectionType
+     */
+    public function reflectType($reflectionParameterOrProperty) : ?\ReflectionType
+    {
+        $reflectionType = null;
+
+        if ($reflectionParameter = $this->reflectionFactory->filterReflectionParameter($reflectionParameterOrProperty)) {
+            $reflectionType = $reflectionParameter->getType();
+
+        } else {
+            if ($reflectionProperty = $this->reflectionFactory->filterReflectionProperty($reflectionParameterOrProperty)) {
+                try {
+                    $reflectionType = $reflectionProperty->{'getType'}();
+                }
+                catch ( \Throwable $e ) {
+                }
+            }
+        }
+
+        return $reflectionType;
     }
 
 

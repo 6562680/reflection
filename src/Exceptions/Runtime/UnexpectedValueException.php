@@ -6,8 +6,8 @@ use Gzhegow\Reflection\Exceptions\RuntimeException;
 
 
 /**
- * OutOfBoundsException
+ * UnexpectedValueException
  */
-class OutOfBoundsException extends RuntimeException
+class UnexpectedValueException extends RuntimeException
 {
 }

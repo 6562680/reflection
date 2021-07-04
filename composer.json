@@ -16,9 +16,6 @@
     
     "ext-json": "*",
     
-    "symfony/property-access": "^5.2",
-    "symfony/property-info": "^5.2",
-    
     "phpdocumentor/reflection-docblock": "^5.2",
     
     "gzhegow/support": "~1.0"

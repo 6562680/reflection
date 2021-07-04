@@ -2,23 +2,14 @@
 
 namespace Gzhegow\Reflection\Tests;
 
-use Gzhegow\Support\Php;
-use Gzhegow\Support\Arr;
-use Gzhegow\Support\Str;
-use Gzhegow\Support\Filter;
-use Gzhegow\Reflection\Assert;
 use PHPUnit\Framework\TestCase;
 use Gzhegow\VarDumper\VarDumper;
-use Gzhegow\Reflection\Reflection;
-use Gzhegow\Reflection\Domain\Reflector;
+use Gzhegow\Reflection\ReflectionFactory;
 use Gzhegow\Support\Domain\SupportFactory;
-use Gzhegow\Reflection\ReflectionInterface;
 use Gzhegow\Reflection\Tests\Services\MyClassA;
 use Gzhegow\Reflection\Tests\Services\MyClassB;
 use Gzhegow\Support\Domain\Debug\TestCaseTrait;
 use Gzhegow\Reflection\Tests\Services\MyClassC;
-use Gzhegow\Reflection\Domain\ReflectionTypeParser;
-use Gzhegow\Reflection\Domain\ReflectionClassUseParser;
 use Gzhegow\Reflection\Tests\Services\AbstractMyClassA;
 use Gzhegow\Reflection\Tests\Services\AbstractMyTraitA;
 
@@ -28,78 +19,31 @@ class ReflectionTest extends TestCase
     use TestCaseTrait;
 
 
-    protected function getArr() : Arr
+    protected static function boot() : void
     {
-        return ( new SupportFactory() )->newArr();
-    }
-
-    protected function getFilter() : Filter
-    {
-        return ( new SupportFactory() )->newFilter();
-    }
-
-    protected function getPhp() : Php
-    {
-        return ( new SupportFactory() )->newPhp();
-    }
-
-    protected function getStr() : Str
-    {
-        return ( new SupportFactory() )->newStr();
+        VarDumper::getInstance()->nonInteractive(true);
     }
 
 
-    protected function getAssert() : Assert
+    protected function newReflectionFactory() : ReflectionFactory
     {
-        return new Assert(
-            $this->getFilter()
-        );
-    }
+        $supportFactory = new SupportFactory(null);
 
-    protected function getReflector() : Reflector
-    {
-        return new Reflector(
-            $this->getFilter(),
-            $this->getPhp(),
-
-            $this->getAssert()
-        );
-    }
-
-    protected function getReflectionClassUseParser() : ReflectionClassUseParser
-    {
-        return new ReflectionClassUseParser(
-            $this->getReflector()
-        );
-    }
-
-    protected function getReflectionTypeParser() : ReflectionTypeParser
-    {
-        return new ReflectionTypeParser(
-            $this->getArr(),
-            $this->getFilter(),
-            $this->getStr(),
-
-            $this->getAssert(),
-            $this->getReflector()
+        return new ReflectionFactory(null,
+            $supportFactory->getFilter()
         );
     }
 
 
-    protected function getReflection() : ReflectionInterface
+    protected function getSupportFactory() : SupportFactory
     {
-        return new Reflection(
-            $this->getAssert(),
-            $this->getReflector(),
-            $this->getReflectionClassUseParser(),
-            $this->getReflectionTypeParser()
-        );
+        return $this->newReflectionFactory()->getSupportFactory();
     }
 
 
     public function testReflectClass()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $this->assertEquals(null, $reflector->reflectClass(null));
         $this->assertEquals(null, $reflector->reflectClass(1));
@@ -122,7 +66,7 @@ class ReflectionTest extends TestCase
 
     public function testReflectReflectionClass()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $reflection = $reflector->reflectClass(MyClassA::class);
         $reflection2 = $reflector->reflectClass($reflection);
@@ -130,10 +74,9 @@ class ReflectionTest extends TestCase
         $this->assertTrue($reflection === $reflection2);
     }
 
-
     public function testReflectFunction()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $func = function () { };
 
@@ -143,7 +86,7 @@ class ReflectionTest extends TestCase
 
     public function testReflectReflectionFunction()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $reflection = $reflector->reflectFunction('is_string');
         $reflection2 = $reflector->reflectFunction($reflection);
@@ -151,10 +94,9 @@ class ReflectionTest extends TestCase
         $this->assertTrue($reflection === $reflection2);
     }
 
-
     public function testReflectMethod()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $a = new MyClassA();
 
@@ -167,7 +109,7 @@ class ReflectionTest extends TestCase
 
     public function testReflectReflectionMethod()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $reflection = $reflector->reflectMethod([ MyClassA::class, 'methodPublic' ]);
         $reflection2 = $reflector->reflectMethod($reflection);
@@ -175,10 +117,9 @@ class ReflectionTest extends TestCase
         $this->assertTrue($reflection === $reflection2);
     }
 
-
     public function testReflectProperty()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $b = new MyClassB();
 
@@ -188,7 +129,7 @@ class ReflectionTest extends TestCase
 
     public function testReflectReflectionProperty()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $reflection = $reflector->reflectProperty(MyClassB::class, 'propertyPublic');
         $reflection2 = $reflector->reflectProperty($reflection);
@@ -196,10 +137,9 @@ class ReflectionTest extends TestCase
         $this->assertTrue($reflection === $reflection2);
     }
 
-
     public function testReflectParameter()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $c = new MyClassC();
 
@@ -209,9 +149,14 @@ class ReflectionTest extends TestCase
         $this->assertInstanceOf(\ReflectionParameter::class, $reflector->reflectParameter([ MyClassC::class, 'method' ], 1));
     }
 
+
+    /**
+     * @noinspection PhpUndefinedFieldInspection
+     */
+
     public function testReflectReflectionParameter()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $reflection = $reflector->reflectParameter([ MyClassC::class, 'method' ], 'a');
         $reflection2 = $reflector->reflectParameter($reflection);
@@ -219,13 +164,9 @@ class ReflectionTest extends TestCase
         $this->assertTrue($reflection === $reflection2);
     }
 
-
-    /**
-     * @noinspection PhpUndefinedFieldInspection
-     */
     public function testPropertyTags()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $myB = new MyClassB();
         $myB->propertyDynamic = 1;
@@ -318,10 +259,9 @@ class ReflectionTest extends TestCase
         $this->assertEquals($tags, $reflector->propertyTags($myB, 'propertyPrivateStaticTrait'));
     }
 
-
     public function testMethodTags()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $myA = new MyClassA();
 
@@ -487,7 +427,7 @@ class ReflectionTest extends TestCase
 
     public function testMethodTagsAbstract()
     {
-        $reflector = $this->getReflector();
+        $reflector = $this->newReflectionFactory()->newReflector();
 
         $default = [
             'abstract'  => false,
@@ -540,73 +480,72 @@ class ReflectionTest extends TestCase
     }
 
 
+    // public function testParsePropertyType()
+    // {
+    //     $typeParser = $this->getReflectionTypeParser();
+    //
+    //     $c = new MyClassC();
+    //
+    //     dump([
+    //         // $typeParser->extractType($c, 'property'),
+    //         // $typeParser->extractPropertyType($c, 'propertyArray'),
+    //         // $typeParser->extractType($c, 'propertyStrings'),
+    //         // $typeParser->extractType($c, 'propertyStringsDeep'),
+    //         // $typeParser->extractType($c, 'propertyObject'),
+    //         // $typeParser->extractType($c, 'propertyObjects'),
+    //         // $typeParser->extractType($c, 'propertyObjectsDeep'),
+    //         // $typeParser->extractType($c, 'propertyUnion'),
+    //         // $typeParser->extractType($c, 'propertyUnionObjects'),
+    //         // $typeParser->extractType($c, 'propertyUnionObjectsDeep'),
+    //         // $typeParser->extractType($c, 'propertyStringsUnion'),
+    //         // $typeParser->extractType($c, 'propertyStringsUnionObjects'),
+    //         // $typeParser->extractType($c, 'propertyStringsUnionObjectsDeep'),
+    //         // $typeParser->extractType($c, 'propertyStringsDeepUnion'),
+    //         // $typeParser->extractType($c, 'propertyStringsDeepUnionObjects'),
+    //         // $typeParser->extractType($c, 'propertyStringsDeepUnionObjectsDeep'),
+    //         // $typeParser->extractType($c, 'propertyCollectionObjects'),
+    //         // $typeParser->extractType($c, 'propertyCollectionObjectKeys'),
+    //         // $typeParser->extractType($c, 'propertyCollectionObjectKeysDeep'),
+    //     ]);
+    //
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'property'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyArray'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStrings'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeep'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyObject'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyObjects'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyObjectsDeep'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyUnion'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyUnionObjects'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyUnionObjectsDeep'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsUnion'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsUnionObjects'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsUnionObjectsDeep'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeepUnion'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeepUnionObjects'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeepUnionObjectsDeep'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyCollectionObjects'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyCollectionObjectKeys'));
+    //     $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyCollectionObjectKeysDeep'));
+    // }
+
     public function testParseParameterType()
     {
-        $typeParser = $this->getReflectionTypeParser();
+        $reflectionTypeParser = $this->newReflectionFactory()->newReflectionTypeParser();
 
         $c = new MyClassC();
 
-        dd([
-            $typeParser->extractParameterType([ $c, 'method' ], 'dddd'),
-        ]);
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'a'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'b'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'c'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'd'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'dd'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'ddd'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'dddd'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'ddddd'));
+        dump($reflectionTypeParser->extractParameterType([ $c, 'method' ], 'dddddd'));
+        dd();
 
-        $this->assertEquals(null, $typeParser->extractParameterType([ $c, 'method' ], 'a'));
-    }
-
-
-    public function testParsePropertyType()
-    {
-        $typeParser = $this->getReflectionTypeParser();
-
-        $c = new MyClassC();
-
-        dump([
-            // $typeParser->extractType($c, 'property'),
-            // $typeParser->extractPropertyType($c, 'propertyArray'),
-            // $typeParser->extractType($c, 'propertyStrings'),
-            // $typeParser->extractType($c, 'propertyStringsDeep'),
-            // $typeParser->extractType($c, 'propertyObject'),
-            // $typeParser->extractType($c, 'propertyObjects'),
-            // $typeParser->extractType($c, 'propertyObjectsDeep'),
-            // $typeParser->extractType($c, 'propertyUnion'),
-            // $typeParser->extractType($c, 'propertyUnionObjects'),
-            // $typeParser->extractType($c, 'propertyUnionObjectsDeep'),
-            // $typeParser->extractType($c, 'propertyStringsUnion'),
-            // $typeParser->extractType($c, 'propertyStringsUnionObjects'),
-            // $typeParser->extractType($c, 'propertyStringsUnionObjectsDeep'),
-            // $typeParser->extractType($c, 'propertyStringsDeepUnion'),
-            // $typeParser->extractType($c, 'propertyStringsDeepUnionObjects'),
-            // $typeParser->extractType($c, 'propertyStringsDeepUnionObjectsDeep'),
-            // $typeParser->extractType($c, 'propertyCollectionObjects'),
-            // $typeParser->extractType($c, 'propertyCollectionObjectKeys'),
-            // $typeParser->extractType($c, 'propertyCollectionObjectKeysDeep'),
-        ]);
-
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'property'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyArray'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStrings'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeep'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyObject'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyObjects'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyObjectsDeep'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyUnion'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyUnionObjects'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyUnionObjectsDeep'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsUnion'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsUnionObjects'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsUnionObjectsDeep'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeepUnion'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeepUnionObjects'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyStringsDeepUnionObjectsDeep'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyCollectionObjects'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyCollectionObjectKeys'));
-        $this->assertEquals(null, $typeParser->extractPropertyType($c, 'propertyCollectionObjectKeysDeep'));
-    }
-
-
-
-    protected static function boot() : void
-    {
-        VarDumper::getInstance()->nonInteractive(true);
+        $this->assertEquals(null, $reflectionTypeParser->extractParameterType([ $c, 'method' ], 'a'));
     }
 }

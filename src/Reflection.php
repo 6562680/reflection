@@ -3,8 +3,7 @@
 namespace Gzhegow\Reflection;
 
 use Gzhegow\Reflection\Domain\Reflector;
-use Gzhegow\Reflection\Domain\ReflectionTypeParser;
-use Gzhegow\Reflection\Domain\ReflectionClassUseParser;
+use Gzhegow\Reflection\Domain\ReflectionTypeParserInterface;
 
 
 /**
@@ -13,41 +12,64 @@ use Gzhegow\Reflection\Domain\ReflectionClassUseParser;
 class Reflection implements ReflectionInterface
 {
     /**
-     * @var Assert
+     * @var ReflectionFactory
      */
-    protected $assert;
+    protected $reflectionFactory;
+
     /**
      * @var Reflector
      */
     protected $reflector;
     /**
-     * @var ReflectionClassUseParser
+     * @var ReflectionTypeParserInterface
      */
-    protected $reflectionClassUseParser;
-    /**
-     * @var ReflectionTypeParser
-     */
-    protected $reflectionClassTypeParser;
+    protected $reflectionTypeParser;
 
 
     /**
      * Constructor
      *
-     * @param Assert                   $assert
-     * @param Reflector                $reflector
-     * @param ReflectionClassUseParser $reflectionClassUseParser
-     * @param ReflectionTypeParser     $reflectionClassTypeParser
+     * @param ReflectionFactory             $reflectionFactory
+     *
+     * @param Reflector                     $reflector
+     * @param ReflectionTypeParserInterface $reflectionTypeParser
      */
     public function __construct(
-        Assert $assert,
+        ReflectionFactory $reflectionFactory,
+
         Reflector $reflector,
-        ReflectionClassUseParser $reflectionClassUseParser,
-        ReflectionTypeParser $reflectionClassTypeParser
+        ReflectionTypeParserInterface $reflectionTypeParser
     )
     {
+        $this->reflectionFactory = $reflectionFactory;
+
         $this->reflector = $reflector;
-        $this->assert = $assert;
-        $this->reflectionClassUseParser = $reflectionClassUseParser;
-        $this->reflectionClassTypeParser = $reflectionClassTypeParser;
+        $this->reflectionTypeParser = $reflectionTypeParser;
+    }
+
+
+    /**
+     * @return ReflectionFactory
+     */
+    public function getReflectionFactory() : ReflectionFactory
+    {
+        return $this->reflectionFactory;
+    }
+
+
+    /**
+     * @return Reflector
+     */
+    public function getReflector() : Reflector
+    {
+        return $this->reflector;
+    }
+
+    /**
+     * @return ReflectionTypeParserInterface
+     */
+    public function getReflectionTypeParser() : ReflectionTypeParserInterface
+    {
+        return $this->reflectionTypeParser;
     }
 }

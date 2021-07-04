@@ -96,10 +96,12 @@ class MyClassC
      * @param string                                                                       $b
      * @param MyClassC                                                                     $c
      *
-     * @param int|array                                                                    $d
+     * @param array                                                                        $d
      * @param string[]                                                                     $dd
      * @param string[][]                                                                   $ddd
-     * @param MyCollection<MyCollection<string,MyClassC>, MyCollection<MyClassC,MyClassC>> $dddd
+     * @param MyCollection<string,MyClassC>                                                $dddd
+     * @param MyCollection<MyClassC,MyClassC>                                              $ddddd
+     * @param MyCollection<MyCollection<string,MyClassC>, MyCollection<MyClassC,MyClassC>> $dddddd
      *
      * @return void
      */
@@ -107,7 +109,9 @@ class MyClassC
         $d,
         $dd,
         $ddd,
-        $dddd
+        $dddd,
+        $ddddd,
+        $dddddd
     )
     {
     }
